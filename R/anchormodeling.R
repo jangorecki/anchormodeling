@@ -50,7 +50,7 @@ AM <- R6Class(
             invisible(self)
         },
         # ETL
-        load = function(data, mapping, src = NA_character_, .args){
+        load = function(mapping, data, src = NA_character_, .args){
             if(!missing(.args)){
                 data <- .args[["data"]]
                 mapping <- .args[["mapping"]]
