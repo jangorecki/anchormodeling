@@ -1,0 +1,9 @@
+language: r
+sudo: required
+
+r_packages:
+ - R6
+ - testthat
+
+r_github_packages:
+ - Rdatatable/data.table
