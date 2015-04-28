@@ -52,7 +52,7 @@ anchor <- R6Class(
         }
     ),
     active = list(
-        meta = function() data.table(ts = Sys.time())
+        meta = function() data.table(src = NA_character_, batch = NA_integer_, ts = Sys.time())
     )
 )
 
@@ -70,7 +70,7 @@ attribute <- R6Class(
         }
     ),
     active = list(
-        meta = function() data.table(ts = Sys.time())
+        meta = function() data.table(knot = NA_character_, hist = NA_character_, src = NA_character_, batch = NA_integer_, ts = Sys.time())
     )
 )
 
@@ -90,7 +90,7 @@ tie <- R6Class(
         }
     ),
     active = list(
-        meta = function() data.table(ts = Sys.time())
+        meta = function() data.table(anchors = list(), knot = NA_character_, hist = NA_character_, src = NA_character_, batch = NA_integer_, ts = Sys.time())
     )
 )
 
@@ -99,13 +99,13 @@ knot <- R6Class(
     classname = "knot",
     inherit = AMobj,
     public = list(
-        initialize = function(mne, desc, parent_mne){
+        initialize = function(mne, desc){
             self$mne <- mne
             self$desc <- desc
             invisible(self)
         }
     ),
     active = list(
-        meta = function() data.table(ts = Sys.time())
+        meta = function() data.table(src = NA_character_, batch = NA_integer_, ts = Sys.time())
     )
 )
