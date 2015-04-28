@@ -10,12 +10,10 @@ AMobj <- R6Class(
         desc = character(),
         data = data.table(),
         initialize = function(class, ...){
-            # return((...))
-            # switch(class, "anchor" = anchor$new, "attribute" = attribute$new, "tie" = tie$new, "knot" = knot$new, stop("Anchor model objects must be anchor/attribute/tie/knot."))
             invisible(self)
         },
         print = function(){
-            cat(self$mne,":",seld$desc,"\n")
+            cat(self$mne,":",self$desc,"\n")
             invisible(self)
         },
         load = function(data, src = NA_character_, .args){
@@ -24,9 +22,8 @@ AMobj <- R6Class(
                 src <- .args[["src"]]
             } # easier to call `load` programmatically
             stopifnot(is.character(src), length(src)==1L, is.data.table(data))
-            private$log_list <- c(private$log_list, list(list(mne = mne, timestamp = Sys.time(), event = "load", src = src, nrow = nrow(data))))
+            private$log_list <- c(private$log_list, list(list(mne = self$mne, timestamp = Sys.time(), event = "load", src = src, nrow = nrow(data))))
             self$data <- rbindlist(list(self$data, data.table(data, self$meta)))
-            setkeyv(self$data, "mne")[]
             invisible(self)
         },
         size = function(){

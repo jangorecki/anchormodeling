@@ -56,13 +56,13 @@ AM <- R6Class(
                 mapping <- .args[["mapping"]]
                 src <- .args[["src"]]
             } # easier to call `load` programmatically
-            stopifnot(is.list(mapping), is.character(src), length(mapping), length(src), is.data.table(data))
+            stopifnot(is.list(mapping), is.character(src), length(mapping)>0L, length(src)>0L, is.data.table(data))
             # iterate over mappings
             mnes <- names(mapping)
             for(i in seq_len(length(mnes))){ # i <- 1L
                 mne <- mnes[i]
                 if(i==1L) if(self$data[mne, class!="anchor"]) stop("First field in the mapping should point to anchor")
-                self$data[mne, obj][[1L]]$load(data = data[, src[[mne]], with=FALSE])
+                self$data[mne, obj][[1L]]$load(data = data[, mapping[[mne]], with=FALSE])
             }
             invisible(self)
 
