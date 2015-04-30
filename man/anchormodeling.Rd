@@ -6,12 +6,12 @@
 \alias{anchormodeling-package}
 \title{anchormodeling-package}
 \description{
-Anchor Modeling metadata manager. AM in-memory Data Warehouse instances. Automated ETL for AM loading.
+Anchor Modeling metadata manager. AM in-memory Data Warehouse instances. Identity Management instaces. Automated ETL for AM loading.
 }
 \author{
 Jan Gorecki
 }
 \seealso{
-\link{AM}
+\link{AM}, \link{IM}
 }
 
