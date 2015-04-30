@@ -32,9 +32,9 @@ AM <- R6Class(
             private$log_list <- c(private$log_list, list(list(event = paste("create", mne), timestamp = Sys.time())))
             invisible(self)
         },
-        read = function(units = getOption("am.size.units")){
+        read = function(units = getOption("am.size.format")){
             copy(self$data)[, label := mapply(self$label, mne = mne, desc = desc, class = class)
-                            ][, c(paste("size",tolower(units),sep="_")) := sapply(obj, function(x) x$size()/1024^size.units(units))
+                            ][, c("size") := am.size.format(sapply(obj, function(x) x$size()), units = units)
                               ][, class := NULL
                                 ]
         },
@@ -72,7 +72,7 @@ AM <- R6Class(
             switch(class,
                    "anchor" = paste(mne, desc, sep="_"),
                    "attribute" = paste(mne, self$data[eval(get.anchor(mne)), desc], desc, sep="_"), # lookup for anchor description
-                   "tie" = paste(mne, self$data[eval(get.anchor(mne)), desc], desc, self$data[eval(get.anchor(mne,2L)), desc], sep="_"),  # two lookups for 2 anchors desc
+                   "tie" = paste(get.anchor(mne), get.anchor(desc), get.anchor(mne,2L), get.anchor(desc,2L), sep="_"),  # two lookups for 2 anchors desc # TO DO
                    "knot" = paste(mne, desc, sep="_"))
         },
         query = function(){
