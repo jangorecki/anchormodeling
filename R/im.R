@@ -1,4 +1,7 @@
 #' @title Identity Management instance
+#' @docType class
+#' @format An R6 class object.
+#' @name IM
 #' @description Keep track on natural keys and generate surrogate keys. It is not part of Anchor Model but complementary identities provider.
 #' @export
 #' @examples
