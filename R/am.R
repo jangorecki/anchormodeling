@@ -1,4 +1,7 @@
 #' @title Anchor Modeling metadata manager
+#' @docType class
+#' @format An R6 class object.
+#' @name AM
 #' @description Generate an instance of Anchor Model data warehouse.
 #' @export
 #' @examples
