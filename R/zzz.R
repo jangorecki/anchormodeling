@@ -1,5 +1,5 @@
 .onLoad <- function(libname, pkgname){
 
-    options("am.size.units"="MB")
+    options("am.size.format"="auto")
 
 }
