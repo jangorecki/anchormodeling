@@ -12,34 +12,42 @@ is.knot <- function(x) "knot" %chin% class(x)
 am.fun <- function(class, method) switch(class, "anchor" = anchor, "attribute" = attribute, "tie" = tie, "knot" = knot, stop("Anchor model objects must be anchor/attribute/tie/knot."))[[method]]
 
 #' @title Format object sie for vector of values
-#' @description Format object size numbers for vector of values using median auto units matching.
+#' @description Format object size numbers for vector of values using mean auto units matching.
 #' @param x numeric vector in bytes or \code{object.size()} function results, a \emph{object_size} class.
-#' @param units character scalar, one of \emph{B, KB, MB, GB}. Default \emph{auto}.
+#' @param units character scalar, one of \emph{auto, B, KB, MB, GB}. Default \emph{NULL} with results \emph{units} on individual rows.
 #' @return character
 am.size.format <-  function(x, units = "auto"){
     # modified: utils:::format.object_size
+    if(is.null(units)) return(sapply(x, function(x) format(x, units="auto")))
+    x <- unlist(x)
     units <- match.arg(units, c("b", "auto", "Kb", "Mb", "Gb", "B", "KB", "MB", "GB"))
     if (units == "auto") {
-        xmed <- median(x,na.rm=TRUE)
-        if (xmed >= 1024^3) units <- "Gb"
-        else if (xmed >= 1024^2) units <- "Mb"
-        else if (xmed >= 1024) units <- "Kb"
-        else units <- "b"
+        xm <- mean(x,na.rm=TRUE)
+        if (xm >= 1024^3) units <- "GB"
+        else if (xm >= 1024^2) units <- "MB"
+        else if (xm >= 1024) units <- "KB"
+        else units <- "B"
     }
     switch(units,
-           "b" =, "B" = paste(x, "bytes"),
-           "Kb" =, "KB" = paste(round(x/1024, 1L), "Kb"),
-           "Mb" =, "MB" = paste(round(x/1024^2, 1L), "Mb"),
-           "Gb" =, "GB" = paste(round(x/1024^3, 1L), "Gb")
+           "b" =, "B" = paste(x, "Bytes"),
+           "Kb" =, "KB" = paste(round(x/1024, 1L), "KB"),
+           "Mb" =, "MB" = paste(round(x/1024^2, 1L), "MB"),
+           "Gb" =, "GB" = paste(round(x/1024^3, 1L), "GB")
     )
 }
 
-#' @title Extracts anchor name from mnemonic
-#' @param mne character
-#' @param i integer location of anchor to extract, for attributes always 1, for ties 1+.
-#' @return character mne of anchor
-get.anchor <- function(mne, i = 1L){
-    sapply(strsplit(mne, split="_", fixed=TRUE), `[`, i)
+#' @title Extracts usually anchor name from mnemonic
+#' @param x character with at least one underscore, for vector param it should expects constant underscore number in each element.
+#' @param i integer location of character to extract, for attributes always 1, for ties 1+, -1 extracts last element - e.g. knot from tie mnemonic.
+#' @return character
+sub_ <- function(x, i = 1L){
+    if(i > 0L){
+        sapply(strsplit(x, split="_", fixed=TRUE), `[`, i)
+    } else if(i == -1L){
+        x <- strsplit(x, split="_", fixed=TRUE)
+        n <- length(x[[1L]])
+        sapply(x, `[`, n)
+    }
 }
 
 #' @title Guess class based on mnemonic
@@ -57,16 +65,7 @@ class.mne <- function(mne){
     classes
 }
 
-#' @title Columns names of 6NF table
-#' @param mne character
-#' @param desc character, not required for anchor and tie
-#' @param class character optional
-#' @return character vector of target generic column names per class
-cols.mne <- function(mne, desc, class){
-    if(missing(class)) class <- class.mne(mne)
-    switch(class,
-           "anchor" = paste(mne, "ID", sep="_"),
-           "attribute" = c(paste(get.anchor(mne),"ID",sep="_"), paste(mne,desc,sep="_")),
-           "tie" = c(paste(get.anchor(mne),"ID",sep="_"), paste(get.anchor(mne,2L),"ID",sep="_")),
-           "knot" = c(paste(mne,"ID",sep="_"), paste(mne, desc, sep="_")))
-}
+#' @title First class of object
+#' @param x any object
+#' @return character
+class1 <- function(x) class(x)[1L]

@@ -9,12 +9,12 @@ am.size.format(x, units = "auto")
 \arguments{
 \item{x}{numeric vector in bytes or \code{object.size()} function results, a \emph{object_size} class.}
 
-\item{units}{character scalar, one of \emph{B, KB, MB, GB}. Default \emph{auto}.}
+\item{units}{character scalar, one of \emph{auto, B, KB, MB, GB}. Default \emph{NULL} with results \emph{units} on individual rows.}
 }
 \value{
 character
 }
 \description{
-Format object size numbers for vector of values using median auto units matching.
+Format object size numbers for vector of values using mean auto units matching.
 }
 
