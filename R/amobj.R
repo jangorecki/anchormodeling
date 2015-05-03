@@ -12,24 +12,37 @@ AMobj <- R6Class(
         mne = character(),
         desc = character(),
         data = data.table(),
+        cols = character(),
+        keys = character(),
+        label = character(),
         initialize = function(class, ...){
             invisible(self)
         },
-        print = function(){
-            cat("<",class(self)[1L],">\n",sep="")
-            cat("  ",self$mne," : ",self$desc,"\n",sep="")
-            invisible(self)
-        },
-        load = function(data, src = NULL, batch = NULL, .args){
+        load = function(data, type, .args){
             if(!missing(.args)){
                 data <- .args[["data"]]
-                src <- .args[["src"]]
-                batch <- .args[["batch"]]
             } # easier to call `load` programmatically
             stopifnot(is.data.table(data))
-            private$log_list <- c(private$log_list, list(list(mne = self$mne, timestamp = Sys.time(), event = "load", src = src, nrow = nrow(data))))
-            local.meta <- list(src = src, batch = batch, ts = Sys.time())
-            self$data <- rbindlist(list(self$data, data.table(data, as.data.table(local.meta))), fill=TRUE)
+            private$log_list <- c(private$log_list, list(list(mne = self$mne, timestamp = Sys.time(), event = "load", nrow = nrow(data))))
+            insert <- function(data) if(nrow(data) > 0L) self$data <- setkeyv(rbindlist(list(self$data, data)),self$keys)
+            upsert <- function(data){
+                init <- length(self$data)==0L # check if first time used
+                if(!init){
+                    # check data types
+                    stopifnot(identical(sapply(self$data, class1), sapply(data, class1)))
+                    # keep only new
+                    setkeyv(data, self$keys)
+                    new.data <- data[self$data, key1 := eval(as.name(self$keys[1L]))][is.na(key1)][, key1 := NULL]
+                    insert(new.data)
+                } else {
+                    # init insert
+                    insert(data)
+                }
+            }
+            switch(type,
+                   "insert" = insert(data),
+                   "upsert" = upsert(data))
+            setkeyv(self$data, self$keys)
             invisible(self)
         },
         size = function(){
@@ -58,6 +71,23 @@ anchor <- R6Class(
             self$mne <- mne
             self$desc <- desc
             invisible(self)
+        },
+        print = function(){
+            cat("<",class(self)[1L],">\n",sep="")
+            cat("  mnemonic: ",self$mne,"\n",sep="")
+            cat("  descriptor: ",self$desc,"\n",sep="")
+            cat("  label: ",self$label,"\n",sep="")
+            cat("  columns: ",paste(self$cols, collapse=", "),"\n",sep="")
+            invisible(self)
+        },
+        setcols = function(){
+            self$cols <- c(paste(self$mne, "ID", sep="_"), paste("Metadata", self$mne, sep="_"))
+            self$keys <- self$cols[1L]
+            invisible(self)
+        },
+        setlabel = function(){
+            self$label <- paste(self$mne, self$desc, sep="_")
+            invisible(self)
         }
     ),
     active = list(
@@ -78,8 +108,32 @@ attribute <- R6Class(
         initialize = function(mne, desc, knot = character(), hist = FALSE){
             self$mne <- mne
             self$desc <- desc
-            self$knot <- knot
+            self$knot <- if(is.character(knot)) knot else if(is.logical(knot) & knot==TRUE) sub_(mne, 2L)
             self$hist <- hist
+            invisible(self)
+        },
+        print = function(){
+            cat("<",class(self)[1L],">\n",sep="")
+            cat("  mnemonic: ",self$mne,"\n",sep="")
+            cat("  descriptor: ",self$desc,"\n",sep="")
+            if(length(self$knot)) cat("  knotted: ",self$knot,"\n",sep="")
+            if(self$hist) cat("  historized: ",self$hist,"\n",sep="")
+            cat("  label: ",self$label,"\n",sep="")
+            cat("  columns: ",paste(self$cols, collapse=", "),"\n",sep="")
+            invisible(self)
+        },
+        setcols = function(anchor_desc){
+            self$cols <- c(
+                paste(self$mne, sub_(self$mne), "ID", sep="_"),
+                if(length(self$knot)) paste(self$mne, self$knot, "ID", sep="_") else paste(self$mne, anchor_desc, self$desc, sep="_"),
+                if(self$hist) paste(self$mne, "ChangedAt", sep="_"),
+                paste("Metadata", self$mne, sep="_")
+            )
+            self$keys <- if(self$hist) c(self$cols[1L], self$cols[3L]) else self$cols[1L]
+            invisible(self)
+        },
+        setlabel = function(anchor_desc){
+            self$label <- paste(self$mne, anchor_desc, self$desc, sep="_")
             invisible(self)
         }
     ),
@@ -102,12 +156,38 @@ tie <- R6Class(
         initialize = function(mne, desc, knot = character(), hist = FALSE){
             self$mne <- mne
             self$desc <- desc
-            self$knot <- knot
+            self$knot <- if(is.character(knot)) knot else if(is.logical(knot) & knot==TRUE) sub_(mne, -1L)
             self$hist <- hist
-            self$anchors <- if(length(knot)){
-                x <- strsplit(mne, "_", fixed=TRUE)[[1L]]
-                x[-length(x)]
-            } else strsplit(mne, "_", fixed=TRUE)[[1L]]
+            mnes <- strsplit(mne, "_", fixed=TRUE)[[1L]]
+            self$anchors <- if(length(self$knot)) mnes[-length(mnes)] else mnes
+            invisible(self)
+        },
+        print = function(){
+            cat("<",class(self)[1L],">\n",sep="")
+            cat("  mnemonic: ",self$mne,"\n",sep="")
+            cat("  descriptor: ",self$desc,"\n",sep="")
+            if(length(self$knot)) cat("  knotted: ",self$knot,"\n",sep="")
+            if(self$hist) cat("  historized: ",self$hist,"\n",sep="")
+            cat("  anchors: ",paste(self$anchors, collapse=", "),"\n",sep="")
+            cat("  label: ",self$label,"\n",sep="")
+            cat("  columns: ",paste(self$cols, collapse=", "),"\n",sep="")
+            invisible(self)
+        },
+        setcols = function(){
+            mnes <- strsplit(self$mne, "_", fixed=TRUE)[[1L]]
+            roles <- strsplit(self$desc, "_", fixed=TRUE)[[1L]]
+            self$cols <- c(
+                paste(paste(mnes, "ID", sep="_"), roles, sep="_"),
+                if(self$hist) paste(paste(paste(mnes, roles, sep="_"), collapse="_"), "ChangedAt", sep="_"),
+                paste("Metadata", paste(paste(mnes, roles, sep="_"), collapse="_"), sep="_")
+            )
+            self$keys <- if(self$hist) c(self$cols[1L], self$cols[2L]) else self$cols[1L]
+            invisible(self)
+        },
+        setlabel = function(){
+            mnes <- strsplit(self$mne, "_", fixed=TRUE)[[1L]]
+            roles <- strsplit(self$desc, "_", fixed=TRUE)[[1L]]
+            self$label <- paste(paste(mnes, roles, sep="_"), collapse="_")
             invisible(self)
         }
     ),
@@ -127,6 +207,27 @@ knot <- R6Class(
         initialize = function(mne, desc){
             self$mne <- mne
             self$desc <- desc
+            invisible(self)
+        },
+        print = function(){
+            cat("<",class(self)[1L],">\n",sep="")
+            cat("  mnemonic: ",self$mne,"\n",sep="")
+            cat("  descriptor: ",self$desc,"\n",sep="")
+            cat("  label: ",self$label,"\n",sep="")
+            cat("  columns: ",paste(self$cols, collapse=", "),"\n",sep="")
+            invisible(self)
+        },
+        setcols = function(){
+            self$cols <- c(
+                paste(self$mne, "ID", sep="_"),
+                paste(self$mne, self$desc, sep="_"),
+                paste("Metadata", self$mne, sep="_")
+            )
+            self$keys <- self$cols[1L]
+            invisible(self)
+        },
+        setlabel = function(){
+            self$label <- paste(self$mne, self$desc, sep="_")
             invisible(self)
         }
     ),

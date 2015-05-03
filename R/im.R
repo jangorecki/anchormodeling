@@ -65,7 +65,7 @@ IM <- R6Class(
                 init_ID <- length(self$ID[[mne]])==0L # check if first time used
                 if(!init_ID){
                     # check nk data types
-                    stopifnot(identical(sapply(self$ID[[mne]][0L, self$NK[[mne]], with=FALSE], typeof),sapply(data[0L, self$NK[[mne]], with=FALSE], typeof)))
+                    stopifnot(identical(sapply(self$ID[[mne]][0L, self$NK[[mne]], with=FALSE], class1),sapply(data[0L, self$NK[[mne]], with=FALSE], class1)))
                     # keep only new ID
                     new_nk.data <- self$ID[[mne]][data[, unique(.SD), .SDcols=self$NK[[mne]]]][is.na(eval(as.name(paste(mne,"ID",sep="_"))))]
                 } else {
