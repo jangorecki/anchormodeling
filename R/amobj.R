@@ -32,7 +32,7 @@ AMobj <- R6Class(
                     stopifnot(identical(sapply(self$data, class1), sapply(data, class1)))
                     # keep only new
                     setkeyv(data, self$keys)
-                    new.data <- data[self$data, key1 := eval(as.name(self$keys[1L]))][is.na(key1)][, key1 := NULL]
+                    new.data <- data[self$data, key1 := eval(as.name(paste0("i.",self$keys[1L])))][is.na(key1)][, key1 := NULL]
                     insert(new.data)
                 } else {
                     # init insert

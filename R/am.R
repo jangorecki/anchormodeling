@@ -147,6 +147,7 @@ AM <- R6Class(
                 #}
                 if(length(src_cols)+1!=length(tgt_cols)) browser()
                 ifUnq <- function(unq, x) if(unq) unique(x) else x
+                # add metadata id, conditional filter to unique, rename and load
                 self$data[mne, obj][[1L]]$load(
                     data = setnames(ifUnq(
                         unq = self$read(mne)$class %chin% c("anchor","knot"),
