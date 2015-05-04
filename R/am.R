@@ -110,8 +110,14 @@ AM <- R6Class(
                     if(!self$read(mne)$obj[[1L]]$knot %chin% ordered_mne) stop("Cannot load knotted attribute/tie without also loading knot for it, provide knot mapping.")
                 }
                 # check if historized
+                #autohist <- FALSE
                 if(isTRUE(self$read(mne)$obj[[1L]]$hist)){
-                    if(length(mapping[[mne]]) < 2L || !"hist" %chin% names(mapping[[mne]])) stop("Cannot load historized attribute wihtout mapping of columns on which historize attribute/tie. Provide historize source in the data set by adding `c('AC_NAM', hist = 'HireName')` into attribute/tie mapping.")
+                    if(length(mapping[[mne]]) < 2L || !"hist" %chin% names(mapping[[mne]])){
+                        #stop("Cannot load historized attribute wihtout mapping of columns on which historize attribute/tie. Provide historize source in the data set by adding `c('AC_NAM', hist = 'HireName')` into attribute/tie mapping.")
+                        # auto historize
+                        # mapping[[mne]][["hist"]] <- ".am"
+                        #autohist <- TRUE
+                    }
                 }
                 # automapping anchor by name convention
                 if(self$read(mne)$class=="anchor"){
@@ -136,6 +142,17 @@ AM <- R6Class(
             }
             # second pass loop, subset columns and provide to am objects classes for loading
             for(mne in ordered_mne){
+                # check if historized
+                autohist <- FALSE
+                if(isTRUE(self$read(mne)$obj[[1L]]$hist)){
+                    if(length(mapping[[mne]]) < 2L || !"hist" %chin% names(mapping[[mne]])){
+                        #stop("Cannot load historized attribute wihtout mapping of columns on which historize attribute/tie. Provide historize source in the data set by adding `c('AC_NAM', hist = 'HireName')` into attribute/tie mapping.")
+                        # auto historize
+                        # mapping[[mne]][["hist"]] <- ".am"
+                        autohist <- TRUE
+                    }
+                }
+
                 src_cols <- mapping[[mne]]
                 src_cols <- c(src_cols[is.null(names(src_cols))], src_cols[names(src_cols) %chin% c("id")], src_cols[names(src_cols) %chin% c("","x")], src_cols[names(src_cols) %chin% c("hist")]) # reorder cols
                 # check if historized
@@ -149,9 +166,11 @@ AM <- R6Class(
                 #if(self$read(mne)$class=="attribute"){
                 #
                 #}
-                if(length(src_cols)+1!=length(tgt_cols)) browser()
+                #if(length(src_cols)+1!=length(tgt_cols)) browser()
                 # subset cols, rename and load further
-                self$data[mne, obj][[1L]]$load(data = setnames(data[, src_cols, with=FALSE], src_cols, tgt_cols[-length(tgt_cols)]),
+                self$data[mne, obj][[1L]]$load(data = data[, src_cols, with=FALSE
+                                                           ][, c(.SD, if(isTRUE(autohist)) list(`.am.autohist` = rep(Sys.time(),.N)))
+                                                             ][, setnames(.SD, c(src_cols, if(isTRUE(autohist)) ".am.autohist"), tgt_cols[-length(tgt_cols)])],
                                                meta = meta)
             }
             invisible(self)
