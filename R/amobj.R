@@ -18,31 +18,37 @@ AMobj <- R6Class(
         initialize = function(class, ...){
             invisible(self)
         },
-        load = function(data, type, .args){
+        insert = function(data) if(nrow(data) > 0L) self$data <- setkeyv(rbindlist(list(self$data, data)),self$keys),
+        query = function(){
+            # get branch of DW
+            self$data
+        },
+        load = function(data, meta, .args){
             if(!missing(.args)){
                 data <- .args[["data"]]
+                meta <- .args[["meta"]]
             } # easier to call `load` programmatically
             stopifnot(is.data.table(data))
-            private$log_list <- c(private$log_list, list(list(mne = self$mne, timestamp = Sys.time(), event = "load", nrow = nrow(data))))
-            insert <- function(data) if(nrow(data) > 0L) self$data <- setkeyv(rbindlist(list(self$data, data)),self$keys)
-            upsert <- function(data){
-                init <- length(self$data)==0L # check if first time used
-                if(!init){
-                    # check data types
-                    stopifnot(identical(sapply(self$data, class1), sapply(data, class1)))
-                    # keep only new
-                    setkeyv(data, self$keys)
-                    new.data <- data[self$data, key1 := eval(as.name(paste0("i.",self$keys[1L])))][is.na(key1)][, key1 := NULL]
-                    insert(new.data)
-                } else {
-                    # init insert
-                    insert(data)
-                }
+
+            if(nrow(data) == 0L){
+                private$log_list <- c(private$log_list, list(list(meta = meta, timestamp = Sys.time(), mne = self$mne, event = "load", in_nrow = 0L, unq_nrow = 0L, load_nrow = 0L)))
+                returns(invisible(self))
             }
-            switch(type,
-                   "insert" = insert(data),
-                   "upsert" = upsert(data))
-            setkeyv(self$data, self$keys)
+            in_nrow <- nrow(data)
+            data <- copy(data[, unique(.SD, by=self$keys)])[, c(self$cols[length(self$cols)]) := meta]
+            unq_nrow <- nrow(data)
+            # check if first time used
+            init <- length(self$data)==0L
+            if(!init){
+                # check data types
+                stopifnot(identical(sapply(self$data, typeof), sapply(data, typeof)))
+                # keep only new
+                setkeyv(data, self$keys)
+                # insert unique by PK including historization col, check if is.na on first key col, then subset
+                data <- data[!self$data] # data[self$data, key1 := eval(as.name(paste0("i.",self$keys[1L])))][is.na(key1)][, key1 := NULL]
+            }
+            self$insert(data)
+            private$log_list <- c(private$log_list, list(list(meta = meta, timestamp = Sys.time(), mne = self$mne, event = "load", in_nrow = in_nrow, unq_nrow = unq_nrow, load_nrow = nrow(data))))
             invisible(self)
         },
         size = function(){

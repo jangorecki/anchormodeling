@@ -20,9 +20,12 @@ AM <- R6Class(
             invisible(self)
         },
         print = function(size.units = getOption("am.size.format")){
-            self$read()[, size := am.size.format(lapply(obj, function(obj) obj$size()), units = size.units)
-                        ][, rows := sapply(obj, function(obj) nrow(obj$data))
-                          ][, print(.SD)]#[, label := sapply(obj, function(obj) obj$label)][, cols := lapply(obj, function(obj) obj$cols)]
+            lkp_etl_logs <- quote(self$etl[order(timestamp), tail(.SD,1L),, mne])
+            self$read()[, label := sapply(obj, function(obj) obj$label)
+                        ][, size := am.size.format(lapply(obj, function(obj) obj$size()), units = size.units)
+                          ][, rows := sapply(obj, function(obj) nrow(obj$data))
+                            ][eval(lkp_etl_logs), `:=`(meta = i.meta, last_event_time = i.timestamp, event = i.event, in_nrow = i.in_nrow, unq_nrow = i.unq_nrow, load_nrow = i.load_nrow)
+                              ][,print(.SD)]
             invisible(self)
         },
         # CRUD
@@ -54,7 +57,7 @@ AM <- R6Class(
         validate = function(){
             all(
                 # mne unique
-                self$data[, length(mne) == length(unique(mne))],
+                self$data[, length(mne) == uniqueN(mne)],
                 # each attribute is linked to existing anchor
                 all(self$data[class=="attribute", unique(sub_(mne))] %chin% self$data[class=="anchor", mne]),
                 # each tie linked to existing anchors
@@ -72,6 +75,7 @@ AM <- R6Class(
             self$data[class!="attribute", obj := sapply(obj, function(obj) obj$setlabel())]
             self$data[class=="attribute", obj := mapply(function(obj, anchor_desc) obj$setlabel(anchor_desc = anchor_desc), obj, anchor_desc = self$read(mne = sub_(mne))$desc)]
             private$instance_run <- TRUE
+            private$log_list <- c(private$log_list, list(list(event = "AM instance started", timestamp = Sys.time())))
             invisible(self)
         },
         # ETL
@@ -146,20 +150,15 @@ AM <- R6Class(
                 #
                 #}
                 if(length(src_cols)+1!=length(tgt_cols)) browser()
-                ifUnq <- function(unq, x) if(unq) unique(x) else x
-                # add metadata id, conditional filter to unique, rename and load
-                self$data[mne, obj][[1L]]$load(
-                    data = setnames(ifUnq(
-                        unq = self$read(mne)$class %chin% c("anchor","knot"),
-                        x = data[, src_cols, with=FALSE]
-                    )[, metadata := meta], c(src_cols,"metadata"), tgt_cols),
-                    type = if(self$read(mne)$class %chin% c("anchor","knot")) "upsert" else "insert"
-                )
+                # subset cols, rename and load further
+                self$data[mne, obj][[1L]]$load(data = setnames(data[, src_cols, with=FALSE], src_cols, tgt_cols[-length(tgt_cols)]),
+                                               meta = meta)
             }
             invisible(self)
         },
         query = function(){
-
+            # self$data
+            stop("not yet ready")
         }
     ),
     private = list(
@@ -167,7 +166,8 @@ AM <- R6Class(
         instance_run = FALSE
     ),
     active = list(
-        log = function() rbindlist(private$log_list)
+        log = function() rbindlist(private$log_list),
+        etl = function() setkeyv(rbindlist(lapply(self$data$obj, function(x) x$log)), c("timestamp","event","meta","mne"))[]
     )
 )
 
