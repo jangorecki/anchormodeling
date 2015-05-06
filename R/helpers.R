@@ -4,12 +4,14 @@ is.attribute <- function(x) "attribute" %chin% class(x)
 is.tie <- function(x) "tie" %chin% class(x)
 is.knot <- function(x) "knot" %chin% class(x)
 
-#' @title AM object method router
-#' @param class character, one of: \emph{anchor, attribute, tie, knot}.
-#' @param method character, method name
-#' @details Used for \code{am.fun(class, "new")(mne, desc, ...)}.
-#' @return function
-am.fun <- function(class, method) switch(class, "anchor" = anchor, "attribute" = attribute, "tie" = tie, "knot" = knot, stop("Anchor model objects must be anchor/attribute/tie/knot."))[[method]]
+paste_ <- function(..., sep="_", collapse="_") paste(..., sep=sep, collapse=collapse)
+
+# #' @title AM object method router
+# #' @param class character, one of: \emph{anchor, attribute, tie, knot}.
+# #' @param method character, method name
+# #' @details Used for \code{am.fun(class, "new", ...)}.
+# #' @return function
+# am.fun <- function(class, method, ...) switch(class, "anchor" = anchor, "attribute" = attribute, "tie" = tie, "knot" = knot, stop("Anchor model objects must be anchor/attribute/tie/knot."))[[method]](...)
 
 #' @title Format object sie for vector of values
 #' @description Format object size numbers for vector of values using mean auto units matching.
@@ -36,34 +38,34 @@ am.size.format <-  function(x, units = "auto"){
     )
 }
 
-#' @title Extracts usually anchor name from mnemonic
-#' @param x character with at least one underscore, for vector param it should expects constant underscore number in each element.
-#' @param i integer location of character to extract, for attributes always 1, for ties 1+, -1 extracts last element - e.g. knot from tie mnemonic.
-#' @return character
-sub_ <- function(x, i = 1L){
-    if(i > 0L){
-        sapply(strsplit(x, split="_", fixed=TRUE), `[`, i)
-    } else if(i == -1L){
-        x <- strsplit(x, split="_", fixed=TRUE)
-        n <- length(x[[1L]])
-        sapply(x, `[`, n)
-    }
-}
+# #' @title Extracts usually anchor name from mnemonic
+# #' @param x character with at least one underscore, for vector param it should expects constant underscore number in each element.
+# #' @param i integer location of character to extract, for attributes always 1, for ties 1+, -1 extracts last element - e.g. knot from tie mnemonic.
+# #' @return character
+# sub_ <- function(x, i = 1L){
+#     if(i > 0L){
+#         sapply(strsplit(x, split="_", fixed=TRUE), `[`, i)
+#     } else if(i == -1L){
+#         x <- strsplit(x, split="_", fixed=TRUE)
+#         n <- length(x[[1L]])
+#         sapply(x, `[`, n)
+#     }
+# }
 
-#' @title Guess class based on mnemonic
-#' @param mne character mnemonic in AM naming convention
-#' @details Limited only to mnemonics AM naming convention and ties with no more than 2 anchors.
-#' @return character anchor/attribute/tie/knot
-class.mne <- function(mne){
-    nchar_mne <- nchar(mne)
-    classes <- rep(NA_character_,length(mne))
-    classes[nchar_mne==2L] <- "anchor"
-    classes[nchar_mne==3L] <- "knot"
-    classes[nchar_mne==5L] <- "tie"
-    classes[nchar_mne==6L] <- "attribute"
-    classes[nchar_mne==9L] <- "tie" # knotted tie
-    classes
-}
+# #' @title Guess class based on mnemonic
+# #' @param mne character mnemonic in AM naming convention
+# #' @details Limited only to mnemonics AM naming convention and ties with no more than 2 anchors.
+# #' @return character anchor/attribute/tie/knot
+# class.mne <- function(mne){
+#     nchar_mne <- nchar(mne)
+#     classes <- rep(NA_character_,length(mne))
+#     classes[nchar_mne==2L] <- "anchor"
+#     classes[nchar_mne==3L] <- "knot"
+#     classes[nchar_mne==5L] <- "tie"
+#     classes[nchar_mne==6L] <- "attribute"
+#     classes[nchar_mne==9L] <- "tie" # knotted tie
+#     classes
+# }
 
 #' @title First class of object
 #' @param x any object

@@ -15,51 +15,67 @@ AM <- R6Class(
     classname = "AM",
     public = list(
         data = data.table(NULL),
-        initialize = function(){
+        initialize = function(naming = c("anchor" = 2L, "attribute" = 3L, "knot" = 3L), hist_col = "ChangedAt"){
+            private$naming <- naming
+            private$hist_col <- hist_col
             private$log_list <- list(list(event = "initialize AM", timestamp = Sys.time()))
             invisible(self)
         },
         print = function(size.units = getOption("am.size.format")){
-            lkp_etl_logs <- quote(self$etl[order(timestamp), tail(.SD,1L),, mne])
-            self$read()[, label := sapply(obj, function(obj) obj$label)
-                        ][, size := am.size.format(lapply(obj, function(obj) obj$size()), units = size.units)
-                          ][, rows := sapply(obj, function(obj) nrow(obj$data))
-                            ][eval(lkp_etl_logs), `:=`(meta = i.meta, last_event_time = i.timestamp, event = i.event, in_nrow = i.in_nrow, unq_nrow = i.unq_nrow, load_nrow = i.load_nrow)
-                              ][,print(.SD)]
+            basic_stats <- quote(self$read()[, size := am.size.format(lapply(obj, function(obj) obj$size()), units = size.units)
+                                             ][, rows := sapply(obj, function(obj) nrow(obj$data))
+                                               ])
+            lkp_etl_logs <- quote(self$etl[order(timestamp), tail(.SD,1L),, name])
+            if(nrow(self$etl) == 0L){
+                print(eval(basic_stats))
+                return(invisible(self))
+            }
+            eval(basic_stats)[eval(lkp_etl_logs), `:=`(meta = i.meta, last_event_time = i.timestamp, event = i.event, in_nrow = i.in_nrow, unq_nrow = i.unq_nrow, load_nrow = i.load_nrow)
+                              ][, print(.SD)]
             invisible(self)
         },
         # CRUD
-        create = function(mne, desc, ..., class){
+        create = function(class, ..., anchor){
             private$instance_run <- FALSE
-            if(length(mne) != 1L) stop("create currently support scalar inputs only")
-            if(missing(class)) class <- class.mne(mne)
-            self$data <- rbindlist(list(self$data, data.table(mne = mne, desc = desc, class = class, obj = list(am.fun(class, "new")(mne, desc, ...)))))
-            setkeyv(self$data, "mne")[]
-            private$log_list <- c(private$log_list, list(list(event = paste("create", mne), timestamp = Sys.time())))
+            if(length(class) != 1L) stop("create currently support scalar inputs only")
+            if(class=="attribute"){
+                if(missing(anchor)) stop("Provide anchor mnemonic of that attribute, use `anchor` argument")
+                anch <- anchor
+            } else if(!missing(anchor)) stop("anchor attribute is used only by attribute, if you are tryng to create tie, use `anchors` argument")
+            rm(anchor)
+            obj = switch(class,
+                         "anchor" = anchormodeling:::anchor$new(...),
+                         "attribute" = anchormodeling:::attribute$new(..., anchor = self$read("anchor", anch)), # lookup for anchor desc using in obj unq name
+                         "tie" = anchormodeling:::tie$new(...),
+                         "knot" = anchormodeling:::knot$new(...),
+                         stop("Anchor model objects must be anchor/attribute/tie/knot."))
+            self$data <- rbindlist(list(self$data, data.table(name = obj$name, class = class, mne = as.character(obj$mne)[1L], desc = as.character(obj$desc)[1L], obj = list(obj))))
+            setkeyv(self$data, c("class","mne"))[]
+            private$log_list <- c(private$log_list, list(list(event = "create", obj = obj$name, timestamp = Sys.time())))
             invisible(self)
         },
-        read = function(mne){
-            if(missing(mne)) mne <- TRUE
-            self$data[eval(mne)]
+        read = function(class = c("anchor","attribute","tie","knot"), mne){
+            if(missing(mne)) mne <- self$data[,unique(mne)]
+            self$data[eval(CJ(class,mne)), nomatch=0L]
         }, # used for self lookup
-        update = function(mne){
+        update = function(class = c("anchor","attribute","tie","knot"), mne){
             stop("update method not available, use $delete and $create")
             invisible(self)
         },
-        delete = function(mne){
+        delete = function(class = c("anchor","attribute","tie","knot"), mne){
             private$instance_run <- FALSE
-            self$data <- self$data[!.(mne)]
-            setkeyv(self$data, "mne")[]
-            private$log_list <- c(private$log_list, list(list(event = paste("delete", mne), timestamp = Sys.time())))
+            self$data <- self$data[!.(class, mne)]
+            setkeyv(self$data, c("class","mne"))[]
+            private$log_list <- c(private$log_list, list(list(event = "delete", obj = name, timestamp = Sys.time())))
             invisible(self)
         },
         # RUN
         validate = function(){
             all(
-                # mne unique
-                self$data[, length(mne) == uniqueN(mne)],
+                # name unique
+                self$data[, length(name) == uniqueN(name)],
                 # each attribute is linked to existing anchor
-                all(self$data[class=="attribute", unique(sub_(mne))] %chin% self$data[class=="anchor", mne]),
+                all(self$data[class=="attribute", unique(unlist(lapply(obj, function(obj) obj[["anchor"]])))] %chin% self$data[class=="anchor", mne]),
                 # each tie linked to existing anchors
                 all(self$data[class=="tie", unique(unlist(lapply(obj, function(obj) obj$anchors)))] %chin% self$data[class=="anchor", mne]),
                 # each knotted attribute linked to existing knot
@@ -70,16 +86,15 @@ AM <- R6Class(
         },
         run = function(){
             if(!self$validate()) stop("AM definition is invalid, see am$validate body for conditions")
-            self$data[class!="attribute", obj := sapply(obj, function(obj) obj$setcols())]
-            self$data[class=="attribute", obj := mapply(function(obj, anchor_desc) obj$setcols(anchor_desc = anchor_desc), obj, anchor_desc = self$read(mne = sub_(mne))$desc)]
-            self$data[class!="attribute", obj := sapply(obj, function(obj) obj$setlabel())]
-            self$data[class=="attribute", obj := mapply(function(obj, anchor_desc) obj$setlabel(anchor_desc = anchor_desc), obj, anchor_desc = self$read(mne = sub_(mne))$desc)]
             private$instance_run <- TRUE
             private$log_list <- c(private$log_list, list(list(event = "AM instance started", timestamp = Sys.time())))
             invisible(self)
         },
         # ETL
         load = function(mapping, data, meta = NA_integer_, .args){
+            browser() # todo dev
+            # some cases to update for self$anchor, self$mne instead
+            # example ctrl+f: sub_(mne)
             if(!isTRUE(private$instance_run)) stop("Run DW instance by am$run")
             if(!missing(.args)){
                 data <- .args[["data"]]
@@ -182,11 +197,13 @@ AM <- R6Class(
     ),
     private = list(
         log_list = list(),
-        instance_run = FALSE
+        instance_run = FALSE,
+        naming = integer(),
+        hist_col = character()
     ),
     active = list(
         log = function() rbindlist(private$log_list),
-        etl = function() setkeyv(rbindlist(lapply(self$data$obj, function(x) x$log)), c("timestamp","event","meta","mne"))[]
+        etl = function() rbindlist(lapply(self$data$obj, function(x) x$log))
     )
 )
 

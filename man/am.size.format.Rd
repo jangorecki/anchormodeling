@@ -2,7 +2,8 @@
 % Please edit documentation in R/helpers.R
 \name{am.size.format}
 \alias{am.size.format}
-\title{Format object sie for vector of values}
+\title{AM object method router
+#}
 \usage{
 am.size.format(x, units = "auto")
 }
@@ -10,11 +11,25 @@ am.size.format(x, units = "auto")
 \item{x}{numeric vector in bytes or \code{object.size()} function results, a \emph{object_size} class.}
 
 \item{units}{character scalar, one of \emph{auto, B, KB, MB, GB}. Default \emph{NULL} with results \emph{units} on individual rows.}
+
+\item{class}{character, one of: \emph{anchor, attribute, tie, knot}.
+#}
+
+\item{method}{character, method name
+#}
 }
 \value{
+function
+
 character
 }
 \description{
 Format object size numbers for vector of values using mean auto units matching.
+}
+\details{
+#
+
+Used for \code{am.fun(class, "new", ...)}.
+#
 }
 

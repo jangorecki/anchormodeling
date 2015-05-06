@@ -2,17 +2,36 @@
 % Please edit documentation in R/helpers.R
 \name{class1}
 \alias{class1}
-\title{First class of object}
+\title{Extracts usually anchor name from mnemonic
+#}
 \usage{
 class1(x)
 }
 \arguments{
+\item{x}{character with at least one underscore, for vector param it should expects constant underscore number in each element.
+#}
+
+\item{i}{integer location of character to extract, for attributes always 1, for ties 1+, -1 extracts last element - e.g. knot from tie mnemonic.
+#}
+
+\item{mne}{character mnemonic in AM naming convention
+#}
+
 \item{x}{any object}
 }
 \value{
 character
+#
+
+character anchor/attribute/tie/knot
+
+character
 }
 \description{
-First class of object
+#
+}
+\details{
+Limited only to mnemonics AM naming convention and ties with no more than 2 anchors.
+#
 }
 
