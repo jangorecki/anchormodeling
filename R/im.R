@@ -50,7 +50,7 @@ IM <- R6Class(
         size = function(mne){
             if(missing(mne)) object.size(self$ID) else object.size(self$ID[[mne]])
         },
-        use = function(data, mne){
+        use = function(data, mne , in.place = FALSE){
             # check inputs
             stopifnot(is.data.table(data), nrow(data) > 0L, is.character(mne), length(mne) > 0L)
             # check valid mne
@@ -79,7 +79,7 @@ IM <- R6Class(
                 } # add new ID
             }
             # iterate over mne to lookup ID from IM
-            data <- copy(data)
+            if(!in.place) data <- copy(data)
             for(mne in mnes){
                 setkeyv(data, self$NK[[mne]])
                 data[self$ID[[mne]], c(paste(mne,"ID",sep="_")) := eval(as.name(paste0("i.",paste(mne,"ID",sep="_"))))]
