@@ -1,3 +1,5 @@
+is.AM <- function(x) "AM" %chin% class(x)
+is.IM <- function(x) "IM" %chin% class(x)
 is.am <- is.maobj <- function(x) any(c("anchor","attribute","tie","knot") %chin% class(x))
 is.anchor <- function(x) "anchor" %chin% class(x)
 is.attribute <- function(x) "attribute" %chin% class(x)
