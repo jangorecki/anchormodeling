@@ -10,6 +10,7 @@ AMobj <- R6Class(
     classname = "AMobj",
     public = list(
         name = character(),
+        code = character(),
         data = data.table(),
         cols = character(),
         keys = character(),
@@ -75,6 +76,7 @@ anchor <- R6Class(
         initialize = function(mne, desc, ...){
             self$mne <- mne
             self$desc <- desc
+            self$code <- self$mne # AC
             self$name <- paste_(self$mne, self$desc) # AC_Actor
             self$cols <- c(paste_(self$mne,"ID"), paste_("Metadata", self$mne)) # AC_ID, Metadata_AC
             self$keys <- self$cols[1L]
@@ -112,6 +114,7 @@ attribute <- R6Class(
             self$anchor <- anchor[["mne"]]
             self$mne <- mne
             self$desc <- desc
+            self$code <- paste_(self$anchor, self$mne) # AC_NAM
             self$knot <- knot
             self$hist <- hist
             self$name <- paste_(self$anchor, self$mne, anchor[["desc"]], self$desc) # AC_NAM_Actor_Name
@@ -159,7 +162,8 @@ tie <- R6Class(
             self$roles <- roles
             self$identifier <- identifier
             self$hist <- hist
-            self$name <- paste_(c(self$anchors,self$knot), self$roles)
+            self$name <- paste_(c(self$anchors,self$knot), self$roles) # AC_exclusive_AC_with
+            self$code <- self$name # AC_exclusive_AC_with
             self$cols <- c(
                 paste_(c(self$anchors,self$knot), "ID", self$roles, collapse=NULL), # AC_ID_exclusive, AC_ID_with
                 if(self$hist) paste_(self$name, "ChangedAt"), # AC_exclusive_AC_with_ChangedAt
@@ -196,6 +200,7 @@ knot <- R6Class(
         initialize = function(mne, desc, ...){
             self$mne <- mne
             self$desc <- desc
+            self$code <- self$mne
             self$name <- paste_(self$mne, self$desc)
             self$cols <- c(
                 paste_(self$mne, "ID"), # GEN_ID
