@@ -7,8 +7,8 @@
 #' @examples
 #' am <- AM$new()
 #' am$log
-#' am$create(class = "anchor", mne = "AC", desc = "Actor")
-#' am$create(class = "attribute", mne = "AC_GEN", desc = "Gender")
+#' am$add$A(mne = "AC", desc = "Actor")
+#' am$add$a(anchor = "AC", mne = "GEN", desc = "Gender", knot = "GEN")
 #' am$data
 #' am$log
 AM <- R6Class(
@@ -16,8 +16,8 @@ AM <- R6Class(
     public = list(
         data = data.table(NULL),
         initialize = function(naming = c("anchor" = 2L, "attribute" = 3L, "knot" = 3L), hist_col = "ChangedAt"){
-            private$naming <- naming
-            private$hist_col <- hist_col
+            private$naming <- naming # not yet used
+            private$hist_col <- hist_col # not yet used
             private$log_list <- list(list(event = "initialize AM", timestamp = Sys.time()))
             invisible(self)
         },
@@ -25,7 +25,7 @@ AM <- R6Class(
             basic_stats <- quote(self$read()[, size := am.size.format(lapply(obj, function(obj) obj$size()), units = size.units)
                                              ][, rows := sapply(obj, function(obj) nrow(obj$data))
                                                ])
-            lkp_etl_logs <- quote(self$etl[order(timestamp), tail(.SD,1L),, name])
+            lkp_etl_logs <- quote(self$etl[order(timestamp), tail(.SD,1L),, code])
             if(nrow(self$etl) == 0L){
                 print(eval(basic_stats))
                 return(invisible(self))
@@ -39,49 +39,54 @@ AM <- R6Class(
             private$instance_run <- FALSE
             if(length(class) != 1L) stop("create currently support scalar inputs only")
             if(class=="attribute"){
-                if(missing(anchor)) stop("Provide anchor mnemonic of that attribute, use `anchor` argument")
+                if(missing(anchor)) stop("Provide anchor mnemonic of the attribute, use `anchor` argument")
                 anch <- anchor
-            } else if(!missing(anchor)) stop("anchor attribute is used only by attribute, if you are tryng to create tie, use `anchors` argument")
+            } else if(!missing(anchor)) stop("anchor attribute is used only by attributes, if you are tryng to create tie, use `anchors` argument")
             rm(anchor)
             obj = switch(class,
-                         "anchor" = anchormodeling:::anchor$new(...),
-                         "attribute" = anchormodeling:::attribute$new(..., anchor = self$read("anchor", anch)), # lookup for anchor desc using in obj unq name
-                         "tie" = anchormodeling:::tie$new(...),
-                         "knot" = anchormodeling:::knot$new(...),
+                         "anchor" = anchor$new(...),
+                         "attribute" = attribute$new(..., anchor = self$read(anch)), # lookup for anchor desc using in obj unq name
+                         "tie" = tie$new(...),
+                         "knot" = knot$new(...),
                          stop("Anchor model objects must be anchor/attribute/tie/knot."))
-            self$data <- rbindlist(list(self$data, data.table(name = obj$name, class = class, mne = as.character(obj$mne)[1L], desc = as.character(obj$desc)[1L], obj = list(obj))))
-            setkeyv(self$data, c("class","mne"))[]
+            self$data <- rbindlist(list(self$data, data.table(code = obj$code, name = obj$name, class = class, mne = as.character(obj$mne)[1L], desc = as.character(obj$desc)[1L], obj = list(obj))))
+            setkeyv(self$data, c("code"))[]
             private$log_list <- c(private$log_list, list(list(event = "create", obj = obj$name, timestamp = Sys.time())))
             invisible(self)
         },
-        read = function(class = c("anchor","attribute","tie","knot"), mne){
-            if(missing(mne)) mne <- self$data[,unique(mne)]
-            self$data[eval(CJ(class,mne)), nomatch=0L]
+        read = function(code, class = c("anchor","attribute","tie","knot")){
+            if(missing(code) && (missing(class) || unique(class) %chin% c("anchor","attribute","tie","knot"))) self$data[TRUE]
+            else if(!missing(code) && (missing(class) || unique(class) %chin% c("anchor","attribute","tie","knot"))) self$data[eval(code)]
+            else if(missing(code) && !unique(class) %chin% c("anchor","attribute","tie","knot")) self$data[eval(class)]
         }, # used for self lookup
-        update = function(class = c("anchor","attribute","tie","knot"), mne){
+        update = function(code, class = c("anchor","attribute","tie","knot")){
             stop("update method not available, use $delete and $create")
             invisible(self)
         },
-        delete = function(class = c("anchor","attribute","tie","knot"), mne){
+        delete = function(code, class = c("anchor","attribute","tie","knot")){
             private$instance_run <- FALSE
-            self$data <- self$data[!.(class, mne)]
-            setkeyv(self$data, c("class","mne"))[]
+            self$data <- self$data[!.(code)]
+            setkeyv(self$data, c("code"))[]
             private$log_list <- c(private$log_list, list(list(event = "delete", obj = name, timestamp = Sys.time())))
             invisible(self)
         },
         # RUN
         validate = function(){
+            setkeyv(self$data, "code")[]
+            set2keyv(self$data, "class")[]
             all(
+                # code unique
+                self$data[, length(code) == uniqueN(code)],
                 # name unique
                 self$data[, length(name) == uniqueN(name)],
                 # each attribute is linked to existing anchor
                 all(self$data[class=="attribute", unique(unlist(lapply(obj, function(obj) obj[["anchor"]])))] %chin% self$data[class=="anchor", mne]),
                 # each tie linked to existing anchors
-                all(self$data[class=="tie", unique(unlist(lapply(obj, function(obj) obj$anchors)))] %chin% self$data[class=="anchor", mne]),
+                all(self$data[class=="tie", unique(unlist(lapply(obj, function(obj) obj[["anchors"]])))] %chin% self$data[class=="anchor", mne]),
                 # each knotted attribute linked to existing knot
-                all(self$data[class=="attribute", unique(unlist(lapply(obj, function(obj) obj$knot)))] %chin% self$data[class=="knot", mne]),
+                all(self$data[class=="attribute", unique(unlist(lapply(obj, function(obj) obj[["knot"]])))] %chin% self$data[class=="knot", mne]),
                 # each knotted tie linked to existing knot
-                all(self$data[class=="tie", unique(unlist(lapply(obj, function(obj) obj$knot)))] %chin% self$data[class=="knot", mne])
+                all(self$data[class=="tie", unique(unlist(lapply(obj, function(obj) obj[["knot"]])))] %chin% self$data[class=="knot", mne])
             )
         },
         run = function(){
@@ -117,6 +122,7 @@ AM <- R6Class(
                 any(c("","x") %chin% names(x)) && any(c("id","hist") %chin% names(x))
             } else TRUE))) stop(paste0("Unexpected elements in mapping definition, expected source column names: '' or 'x' and 'id' and 'hist'. Check following mappings: ",paste(names(r)[r], collapse=", "))) # allowed names: ""/"x", "id", "hist"
             am.order <- c("anchor" = 1L, "knot" = 2L, "attribute" = 3L, "tie" = 4L)
+            # mne to codes?
             ordered_mne <- self$read(names(mapping))[,mne,keyby=.(am.order[class])]$mne
             # first pass loop, check check if mapping matches, fill defaults
             for(mne in ordered_mne){
@@ -138,7 +144,7 @@ AM <- R6Class(
                 if(self$read(mne)$class=="anchor"){
                     if(length(mapping[[mne]]) == 0L){
                         if(!paste(mne,"ID",sep="_") %chin% names(data)) stop(paste0("If anchor ID field was not provided it has to be in naming convention '",paste(mne,"ID",sep="_"),"' (as IM class produces, see ?IM), otherwise provide anchor ID source in the data set by adding `'AC'` or `c(x = 'AC')` into anchor mapping."))
-                        mapping[[mne]] <- paste(mne,"ID",sep="_")
+                        mapping[[mne]] <- paste_(mne,"ID")
                     } # use automapping for default naming convention column, [mne]_ID
                 }
                 # automapping for knots ID by name convention
@@ -193,6 +199,20 @@ AM <- R6Class(
         query = function(){
             # self$data
             stop("not yet ready")
+        },
+        xml = function(file = format(Sys.time(),"AM_%Y%m%d_%H%M%S.xml")){
+            meta_header <- paste0('<schema format="0.98" date="',format(Sys.Date(),"%Y-%m-%d"),'" time="',format(Sys.time(),"%H:%M:%S"),'">')
+            tech_header <- '<metadata changingRange="datetime" encapsulation="dbo" identity="int" metadataPrefix="Metadata" metadataType="int" metadataUsage="true" changingSuffix="ChangedAt" identitySuffix="ID" positIdentity="int" positGenerator="true" positingRange="datetime" positingSuffix="PositedAt" positorRange="tinyint" positorSuffix="Positor" reliabilityRange="tinyint" reliabilitySuffix="Reliability" reliableCutoff="1" deleteReliability="0" reliableSuffix="Reliable" partitioning="false" entityIntegrity="true" restatability="true" idempotency="false" assertiveness="true" naming="improved" positSuffix="Posit" annexSuffix="Annex" chronon="datetime2(7)" now="sysdatetime()" dummySuffix="Dummy" versionSuffix="Version" statementTypeSuffix="StatementType" checksumSuffix="Checksum" businessViews="false" equivalence="false" equivalentSuffix="EQ" equivalentRange="tinyint" databaseTarget="SQLServer" temporalization="uni"/>'
+            footer <- "</schema>"
+            lines <- c(meta_header,tech_header)
+            lines <- c(lines, self$read(class="knot")[, sapply(obj, function(obj) obj$xml())])
+            for(anchor_mne in self$read(class="anchor")$mne){
+                lines <- c(lines, self$read(mne = anchor_mne)[, sapply(obj, function(obj) obj$xml(attributes = self$read(class="attribute")[sapply(obj, function(obj) obj[["anchor"]])==anchor_mne]))])
+            }
+            lines <- c(lines, self$read(class="tie")[, sapply(obj, function(obj) obj$xml())])
+            lines <- c(lines, footer)
+            write(lines, file=file, append=FALSE)
+            invisible(file)
         }
     ),
     private = list(
@@ -203,7 +223,17 @@ AM <- R6Class(
     ),
     active = list(
         log = function() rbindlist(private$log_list),
-        etl = function() rbindlist(lapply(self$data$obj, function(x) x$log))
+        etl = function() rbindlist(lapply(self$data$obj, function(x) x$log)),
+        add = function(){
+            list("anchor" = function(...) self$create(class = "anchor", ...),
+                 "A" = function(...) self$create(class = "anchor", ...),
+                 "attribute" = function(..., anchor) self$create(class = "attribute", ..., anchor = anchor), # must provide anchor directly because it is lookedup before initialize AMobj
+                 "a" = function(..., anchor) self$create(class = "attribute", ..., anchor = anchor),
+                 "tie" = function(...) self$create(class = "tie", ...),
+                 "t" = function(...) self$create(class = "tie", ...),
+                 "knot" = function(...) self$create(class = "knot", ...),
+                 "k" = function(...) self$create(class = "knot", ...))
+        }
     )
 )
 
