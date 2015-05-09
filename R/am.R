@@ -105,7 +105,7 @@ AM <- R6Class(
         run = function(){
             if(!self$validate()) stop("AM definition is invalid, see am$validate body for conditions")
             private$instance_run <- TRUE
-            private$log_list <- c(private$log_list, list(list(event = "AM instance started", obj = name, timestamp = Sys.time())))
+            private$log_list <- c(private$log_list, list(list(event = "AM instance started", obj = NA_character_, timestamp = Sys.time())))
             invisible(self)
         },
         # ETL
