@@ -22,16 +22,19 @@ AM <- R6Class(
             invisible(self)
         },
         print = function(size.units = getOption("am.size.format")){
-            basic_stats <- quote(self$read()[, size := am.size.format(lapply(obj, function(obj) obj$size()), units = size.units)
-                                             ][, rows := sapply(obj, function(obj) nrow(obj$data))
-                                               ])
+            basic_stats <- quote(self$read()[, hist := sapply(obj, function(obj) isTRUE(obj$hist))
+                                             ][, knot := sapply(obj, function(obj) as.character(obj$knot)[1L])
+                                               ][, size := am.size.format(lapply(obj, function(obj) obj$size()), units = size.units)
+                                                 ][, rows := sapply(obj, function(obj) nrow(obj$data))
+                                                   ])
             lkp_etl_logs <- quote(self$etl[order(timestamp), tail(.SD,1L),, code])
             if(nrow(self$etl) == 0L){
                 print(eval(basic_stats))
                 return(invisible(self))
             }
             eval(basic_stats)[eval(lkp_etl_logs), `:=`(meta = i.meta, last_event_time = i.timestamp, event = i.event, in_nrow = i.in_nrow, unq_nrow = i.unq_nrow, load_nrow = i.load_nrow)
-                              ][, print(.SD)]
+                              ][order(-last_event_time)
+                                ][, print(.SD)]
             invisible(self)
         },
         # CRUD
@@ -62,11 +65,11 @@ AM <- R6Class(
             }
             else if(missing(code) && !missing(class)){
                 cl <- class; rm(class)
-                self$data[class == eval(cl), verbose = getOption("am.key.verbose")] # key2
+                self$data[class %chin% eval(cl), verbose = getOption("am.key.verbose")] # key2
             }
             else if(!missing(code) && !missing(class)){
                 cd <- code; cl <- class; rm(code, class)
-                self$data[eval(cd), verbose = getOption("am.key.verbose")][class == eval(cl), verbose = getOption("am.key.verbose")]
+                self$data[eval(cd), verbose = getOption("am.key.verbose")][class %chin% eval(cl), verbose = getOption("am.key.verbose")]
             }
         }, # used for self lookup
         update = function(code, class = c("anchor","attribute","tie","knot")){
@@ -107,9 +110,6 @@ AM <- R6Class(
         },
         # ETL
         load = function(mapping, data, meta = NA_integer_, .args){
-            browser() # todo dev
-            # some cases to update for self$anchor, self$mne instead
-            # example ctrl+f: sub_(mne)
             if(!isTRUE(private$instance_run)) stop("Run DW instance by am$run")
             if(!missing(.args)){
                 data <- .args[["data"]]
@@ -120,68 +120,58 @@ AM <- R6Class(
                 is.list(mapping),
                 length(mapping)>0L,
                 is.data.table(data),
-                all(names(mapping) %chin% self$data$mne), # exists in defined AM
-                all(sapply(mapping, function(x) length(x) <= 3L)) # only two columns allowed
+                all(names(mapping) %chin% self$data$mne) # exists in defined AM
             )
             if(!all(unlist(mapping) %chin% names(data))){
                 stop(paste0("Following columns defined in mapping don't exists in income data: ", paste(unlist(mapping)[!unlist(mapping) %chin% names(data)], collapse=", ")))
             } # src columns exists in data to load
-            if(!all(r <- sapply(mapping, function(x) if(!is.null(names(x))) all(names(x) %chin% c("","x","id","hist")) else TRUE))) stop(paste0("Unexpected elements in mapping definition, expected source column names: '' or 'x' and 'id' and 'hist'. Check following mappings: ",paste(names(r)[r], collapse=", ")))
-            if(!all(r <- sapply(mapping, function(x) if(length(x) > 1L){
-                if(is.null(names(x))) return(FALSE)
-                any(c("","x") %chin% names(x)) && any(c("id","hist") %chin% names(x))
-            } else TRUE))) stop(paste0("Unexpected elements in mapping definition, expected source column names: '' or 'x' and 'id' and 'hist'. Check following mappings: ",paste(names(r)[r], collapse=", "))) # allowed names: ""/"x", "id", "hist"
+            if(!all(names(mapping) %chin% self$read(class = c("anchor","knot", "tie"))[,mne])){
+                stop(paste0("In the mapping definition attribute mappings should be provided as sublists of anchors, related to: ", paste(names(mapping)[names(mapping) %chin% self$read(class = c("anchor","knot", "tie"))], collapse=", ")))
+            } # nodes in mapping not attributes - attributes must be nested in anchors
             am.order <- c("anchor" = 1L, "knot" = 2L, "attribute" = 3L, "tie" = 4L)
-            # mne to codes?
-            ordered_mne <- self$read(names(mapping))[,mne,keyby=.(am.order[class])]$mne
+            top_code <- self$read(names(mapping))[,code,keyby=.(am.order[class])]$code
             # first pass loop, check check if mapping matches, fill defaults
-            for(mne in ordered_mne){
-                # check if knotted
-                if(length(self$read(mne)$obj[[1L]]$knot)){
-                    if(!self$read(mne)$obj[[1L]]$knot %chin% ordered_mne) stop("Cannot load knotted attribute/tie without also loading knot for it, provide knot mapping.")
-                }
-                # check if historized
-                #autohist <- FALSE
+            for(code in top_code){
+                mne <- self$read(code)[,mne]
+                if(self$read(code)[, class=="attribute"]) stop("Attributes in mapping should be nested into anchor mapping list.") # check if unnested attribute
+                if(length(self$read(code)$obj[[1L]]$knot)){
+                    if(!self$read(code)$obj[[1L]]$knot %chin% top_code) stop("Cannot load knotted attribute/tie without also loading knot for it, provide knot mapping.")
+                } # check if knotted
                 if(isTRUE(self$read(mne)$obj[[1L]]$hist)){
-                    if(length(mapping[[mne]]) < 2L || !"hist" %chin% names(mapping[[mne]])){
+                    #if(length(mapping[[mne]]) < 2L || !"hist" %chin% names(mapping[[mne]])){
                         #stop("Cannot load historized attribute wihtout mapping of columns on which historize attribute/tie. Provide historize source in the data set by adding `c('AC_NAM', hist = 'HireName')` into attribute/tie mapping.")
                         # auto historize
                         # mapping[[mne]][["hist"]] <- ".am"
                         #autohist <- TRUE
-                    }
-                }
-                # automapping anchor by name convention
-                if(self$read(mne)$class=="anchor"){
+                    #}
+                } # check if historized - currently do nothing
+                if(self$read(code)[, class=="anchor"]){
                     if(length(mapping[[mne]]) == 0L){
                         if(!paste(mne,"ID",sep="_") %chin% names(data)) stop(paste0("If anchor ID field was not provided it has to be in naming convention '",paste(mne,"ID",sep="_"),"' (as IM class produces, see ?IM), otherwise provide anchor ID source in the data set by adding `'AC'` or `c(x = 'AC')` into anchor mapping."))
-                        mapping[[mne]] <- paste_(mne,"ID")
+                        mapping[[mne]][[paste_(mne,"ID")]] <- paste_(mne,"ID")
                     } # use automapping for default naming convention column, [mne]_ID
-                }
-                # automapping for knots ID by name convention
-                if(self$read(mne)$class=="knot"){
+                    if(!all(sapply(names(mapping[[mne]]), function(child_mne) is.null(names(mapping[[mne]][[child_mne]])) || all(names(mapping[[mne]][[child_mne]]) %chin% c("","x","anchors","anchor","roles","identifier","knot","hist"))))){
+                        stop(paste0('Element ',code,' in your mapping definition contains some childs elements which names do not match to allowed ',paste(c("","x","anchors","anchor","roles","identifier","knot","hist"),collapse=", ")))
+                    } # attributes nested in anchor character names validation
+                } # automapping anchor by name convention, check column names
+                if(self$read(code)[, class=="knot"]){
                     if(length(mapping[[mne]]) == 1L){
                         if(!paste(mne,"ID",sep="_") %chin% names(data)) stop(paste0("If knot ID field was not provided it has to be in naming convention '",paste(mne,"ID",sep="_"),"' (as IM class produces, see ?IM), otherwise provide knot ID source in the data set by adding `c('GEN', id = 'GEN_ID')` into knot mapping."))
                         mapping[[mne]] <- c(mapping[[mne]], id = paste(mne,"ID",sep="_"))
                     } # use automapping for default naming convention column, [mne]_ID
-                }
-                # check automapping for attributes by anchor mapping lookup
-                if(self$read(mne)$class=="attribute"){
-                    if(!"id" %chin% names(mapping[[mne]])){
-                        mapping[[mne]] <- c(mapping[[mne]], id = mapping[[sub_(mne)]])
-                    }
-                }
+                } # automapping for knots ID by name convention
             }
+            browser()
             # second pass loop, subset columns and provide to am objects classes for loading
-            for(mne in ordered_mne){
+            for(code in top_code){
                 # check if historized
-                autohist <- FALSE
                 if(isTRUE(self$read(mne)$obj[[1L]]$hist)){
-                    if(length(mapping[[mne]]) < 2L || !"hist" %chin% names(mapping[[mne]])){
-                        #stop("Cannot load historized attribute wihtout mapping of columns on which historize attribute/tie. Provide historize source in the data set by adding `c('AC_NAM', hist = 'HireName')` into attribute/tie mapping.")
-                        # auto historize
-                        # mapping[[mne]][["hist"]] <- ".am"
-                        autohist <- TRUE
-                    }
+                    #if(length(mapping[[mne]]) < 2L || !"hist" %chin% names(mapping[[mne]])){
+                    #    #stop("Cannot load historized attribute wihtout mapping of columns on which historize attribute/tie. Provide historize source in the data set by adding `c('AC_NAM', hist = 'HireName')` into attribute/tie mapping.")
+                    #    # auto historize
+                    #    # mapping[[mne]][["hist"]] <- ".am"
+                    #    autohist <- TRUE
+                    #}
                 }
 
                 src_cols <- mapping[[mne]]
