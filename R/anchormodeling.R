@@ -45,7 +45,7 @@ actor.am <- function(iteration = 1){
     am$create("attribute", anchor = "ST", mne = "NAM", desc = "Name", hist = TRUE)
     if(iteration>=3) am$create("attribute", anchor = "ST", mne = "MIN", desc = "Minimum", knot = "UTL")
     if(iteration>=3) am$create("attribute", anchor = "ST", mne = "AVG", desc = "Average", hist = TRUE, knot = "UTL")
-    am$create("knot", mne = "UTL", desc = "Utilization")
+    if(iteration>=3) am$create("knot", mne = "UTL", desc = "Utilization")
     am$create("tie", anchors = c("PE","ST"), roles = c("wasHeld","at"), identifier = c(Inf,1))
     am$create("tie", anchors = c("ST","PR"), roles = c("at","isPlaying"), identifier = c(Inf,Inf))
     if(iteration>=3) am$create("tie", anchors = c("PR","ST","PE"), roles = c("content","location","of"), identifier = c(1,1,Inf))
