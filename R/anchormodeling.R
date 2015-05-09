@@ -10,6 +10,7 @@ NULL
 #' @title Example Actor anchor model
 #' @param iteration numeric 1+
 #' @details Tree iterations of model available: Stage Performances, New Example Model, New startup example in 0.98
+#' @export actor.am
 #' @return AM class object populated with anchors, attributes, ties and knots from the anchor modeling examples
 actor.am <- function(iteration = 1){
     stopifnot(iteration > 0)
