@@ -89,6 +89,14 @@ anchor <- R6Class(
             cat("  descriptor: ",self$desc,"\n",sep="")
             cat("  columns: ",paste(self$cols, collapse=", "),"\n",sep="")
             invisible(self)
+        },
+        xml = function(attributes){
+            # anchor node
+            lines <- paste0('<anchor mnemonic="',self$mne,'" descriptor="',self$desc,'" identity="int">')
+            # anchor attributes
+            lines <- c(lines, attributes[, sapply(obj, function(obj) obj$xml())])
+            # anchor close node
+            c(lines, "</anchor>")
         }
     ),
     active = list(
@@ -136,6 +144,9 @@ attribute <- R6Class(
             if(self$hist) cat("  historized: ",self$hist,"\n",sep="")
             cat("  columns: ",paste(self$cols, collapse=", "),"\n",sep="")
             invisible(self)
+        },
+        xml = function(){
+            paste0('<attribute mnemonic="',self$mne,'" descriptor="',self$desc,'"',if(isTRUE(self$hist)) ' timeRange="datetime"', if(as.logical(length(self$knot))) paste0(' knotRange="',self$knot,'"') else ' dataRange="varchar(42)"','></attribute>') # hardcode for timeRange/dataRange, see: http://stackoverflow.com/q/30054615/2490497
         }
     ),
     active = list(
@@ -180,6 +191,12 @@ tie <- R6Class(
             if(self$hist) cat("  historized: ",self$hist,"\n",sep="")
             cat("  columns: ",paste(self$cols, collapse=", "),"\n",sep="")
             invisible(self)
+        },
+        xml = function(){
+            lines <- paste0('<tie',if(isTRUE(self$hist)) ' timeRange="datetime"','>')
+            prefix <- c(rep("<anchor", length(self$anchors)), rep("<knot", length(self$knot)))
+            lines <- c(lines, paste0(prefix,'Role role="',self$roles,'" type="',c(self$anchors, self$knot),'" identifier="',tolower(as.character(!is.finite(self$identifier))),'"','/>'))
+            c(lines, '</tie>')
         }
     ),
     active = list(
@@ -217,6 +234,9 @@ knot <- R6Class(
             cat("  descriptor: ",self$desc,"\n",sep="")
             cat("  columns: ",paste(self$cols, collapse=", "),"\n",sep="")
             invisible(self)
+        },
+        xml = function(){
+            paste0('<knot mnemonic="',self$mne,'" descriptor="',self$desc,'" identity="int" dataRange="varchar(max)"></knot>') # hardcode, see comment near attribute$xml
         }
     ),
     active = list(
