@@ -18,13 +18,17 @@ im <- IM$new()
 im$create(mne = "GEN", nk = "gender")
 im$create(mne = "UL", nk = "user_login")
 # populate data
-data <- data.table(user_login = c("asd","qwe","zxc","asd","zxc","asd"), gender = c("F","M","M","F","M","F"), balance = rnorm(6,10))
+data <- data.table(user_login = c("asd","qwe","zxc","asd","zxc","asd"),
+                   gender = c("F","M","M","F","M","F"),
+                   balance = rnorm(6,10))
 data
 # update and lookup identities from IM
 data.sk <- im$use(data, mne = c("UL","GEN"))
 data.sk
 # incremental load
-data <- data.table(user_login = c("zxc","qaz","qaz","zaq"), gender = c("M","F","F","M"), balance = rnorm(4,10))
+data <- data.table(user_login = c("zxc","qaz","qaz","zaq"),
+                   gender = c("M","F","F","M"),
+                   balance = rnorm(4,10))
 data.sk <- im$use(data, mne = c("UL","GEN"))
 data.sk
 # preview identities

@@ -14,8 +14,8 @@ Generate an instance of Anchor Model data warehouse.
 \examples{
 am <- AM$new()
 am$log
-am$create(class = "anchor", mne = "AC", desc = "Actor")
-am$create(class = "attribute", mne = "AC_GEN", desc = "Gender")
+am$add$A(mne = "AC", desc = "Actor")
+am$add$a(anchor = "AC", mne = "GEN", desc = "Gender", knot = "GEN")
 am$data
 am$log
 }
