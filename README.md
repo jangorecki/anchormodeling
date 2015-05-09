@@ -1,6 +1,6 @@
 # Anchor Modeling [![Build Status](https://travis-ci.org/jangorecki/anchormodeling.svg?branch=master)](https://travis-ci.org/jangorecki/anchormodeling)
 
-**Current version:** [0.1](NEWS.md)  
+**Current version:** [0.2](NEWS.md)  
 
 - [x] Anchor Model metadata manager.  
 - [x] Export model to XML loadable in [Anchor Modeler](roenbaeck.github.io/anchor/).
