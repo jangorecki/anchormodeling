@@ -7,6 +7,15 @@
 #' @name anchormodeling
 NULL
 
+anchor_modeler_url <- function() "http://roenbaeck.github.io/anchor/"
+
+#' @title Open browser on official Anchor Modeler
+#' @export
+#' @return invisibly NULL
+run_anchor_modeler <- function(){
+    browseURL(anchor_modeler_url())
+}
+
 #' @title Example Actor anchor model
 #' @param iteration numeric 1+
 #' @details Tree iterations of model available: Stage Performances, New Example Model, New startup example in 0.98
@@ -53,4 +62,39 @@ actor.am <- function(iteration = 1){
     if(iteration>=3) am$create("tie", anchors = c("PR","ST","PE"), roles = c("content","location","of"), identifier = c(1,1,Inf))
     # return
     am
+}
+
+#' @title Example data for actor model
+#' @param src character \code{"Stage"} or \code{"Actor"} currently.
+#' @param iteration numeric 1+
+#' @details Two iterations of data loads.
+#' @export actor.data
+#' @return data.table of populated source data load
+actor.data <- function(src = "Stage", iteration = 1L){
+    r <- list()
+    if(src == "Stage" & iteration==1L){
+        r[[1L]] <- list(name = 'The Shakespeare Theatre', address = '154bis, boulevard de la Chapelle')
+        r[[2L]] <- list('Theatre Victor Hugo','11, rue du Temple')
+        r[[3L]] <- list('The Dostojevskij theatre','10, rue Fontaine')
+        r[[4L]] <- list('Theatre Sokrates','1, rue du Temple')
+        r[[5L]] <- list('Teater August Strindberg','Storgatan 2')
+        r[[6L]] <- list('Teater Ingmar Bergman','Drottninggatan 55')
+    } else if(src == "Stage" & iteration==2L){
+        r[[1L]] <- list(name = 'The Shakespeare Theatre', address = '154bis, boulevard de la Chapelle')
+        r[[2L]] <- list('Theatre Victor Hugo','11, rue du Temple')
+        r[[3L]] <- list('The Dostojevskij theatre','10, rue Fontaine')
+        r[[4L]] <- list('Theatre Sokrates','1, rue du Temple')
+        r[[5L]] <- list('August Strindbergs','Storgatan 2') # name changed
+        r[[6L]] <- list('Teater Ingmar Bergman','Drottninggatan 55')
+    } else if(src == "Actor" & iteration==1L){
+        r[[1L]] <- list(code = '1', name = 'Mike', gender = 'M', level = 4L)
+        r[[2L]] <- list('2', 'Bob', 'M', 1L)
+        r[[3L]] <- list('3', 'Alice', 'F', 3L)
+        r[[4L]] <- list('4', 'Lee', 'M', 4L)
+    } else if(src == "Actor" & iteration==2L){
+        r[[1L]] <- list(code = '1', name = 'Mike', gender = 'M', level = 5L) # prof level changed
+        r[[2L]] <- list('2', 'Ben', 'M', 1L) # name changed
+        r[[3L]] <- list(code = '3', 'Alice', 'F', 3L) # unchanged
+    } else stop("unknown src/iteration")
+    rbindlist(r)
 }
