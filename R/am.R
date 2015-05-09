@@ -18,7 +18,7 @@ AM <- R6Class(
         initialize = function(naming = c("anchor" = 2L, "attribute" = 3L, "knot" = 3L), hist_col = "ChangedAt"){
             private$naming <- naming # not yet used
             private$hist_col <- hist_col # not yet used
-            private$log_list <- list(list(event = "initialize AM", timestamp = Sys.time()))
+            private$log_list <- list(list(event = "initialize AM", obj = NA_character_, timestamp = Sys.time()))
             invisible(self)
         },
         print = function(size.units = getOption("am.size.format")){
@@ -54,7 +54,7 @@ AM <- R6Class(
                          stop("Anchor model objects must be anchor/attribute/tie/knot."))
             self$data <- rbindlist(list(self$data, data.table(code = obj$code, name = obj$name, class = class, mne = as.character(obj$mne)[1L], desc = as.character(obj$desc)[1L], obj = list(obj))))
             setkeyv(self$data, c("code"))[]
-            private$log_list <- c(private$log_list, list(list(event = "create", obj = obj$name, timestamp = Sys.time())))
+            private$log_list <- c(private$log_list, list(list(event = "create", obj = obj$code, timestamp = Sys.time())))
             invisible(self)
         },
         read = function(code, class){
@@ -80,7 +80,7 @@ AM <- R6Class(
             private$instance_run <- FALSE
             self$data <- self$data[!.(code)]
             setkeyv(self$data, c("code"))[]
-            private$log_list <- c(private$log_list, list(list(event = "delete", obj = name, timestamp = Sys.time())))
+            private$log_list <- c(private$log_list, list(list(event = "delete", obj = code, timestamp = Sys.time())))
             invisible(self)
         },
         # RUN
@@ -105,7 +105,7 @@ AM <- R6Class(
         run = function(){
             if(!self$validate()) stop("AM definition is invalid, see am$validate body for conditions")
             private$instance_run <- TRUE
-            private$log_list <- c(private$log_list, list(list(event = "AM instance started", timestamp = Sys.time())))
+            private$log_list <- c(private$log_list, list(list(event = "AM instance started", obj = name, timestamp = Sys.time())))
             invisible(self)
         },
         # ETL
@@ -212,6 +212,7 @@ AM <- R6Class(
             }
             lines <- c(lines, unlist(sapply(self$read(class="tie")$obj, function(obj) obj$xml())))
             lines <- c(lines, footer)
+            private$log_list <- c(private$log_list, list(list(event = "AM model exported", obj = file, timestamp = Sys.time())))
             write(lines, file=file, append=FALSE)
             invisible(file)
         }
