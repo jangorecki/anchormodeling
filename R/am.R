@@ -128,21 +128,22 @@ AM <- R6Class(
             if(!all(names(mapping) %chin% self$read(class = c("anchor","knot", "tie"))[,mne])){
                 stop(paste0("In the mapping definition attribute mappings should be provided as sublists of anchors, related to: ", paste(names(mapping)[names(mapping) %chin% self$read(class = c("anchor","knot", "tie"))], collapse=", ")))
             } # nodes in mapping not attributes - attributes must be nested in anchors
+            # extract nested attributes fro the anchors
+            top_codes <- self$read(names(mapping))[,.(code, class)]
+            attr_list <- lapply(top_codes[class=="anchor", setNames(code,code)], function(anchor) data.table(anchor = anchor, mne = names(mapping[[anchor]])[nchar(names(mapping[[anchor]])) > 0L])) # exclude "" field = anchor ID mapping
+            attr_for_anchors <- self$read(class="attribute")[sapply(obj, function(obj) obj$anchor %chin% top_codes[class=="anchor", code]), .(code, class, mne, anchor = sapply(obj, function(obj) obj$anchor))]
+            setkeyv(attr_for_anchors, c("anchor","mne"))
+            attr_codes <- attr_for_anchors[rbindlist(attr_list), .(code, class)]
+            if(any(is.na(attr_codes$code))) stop("Some of the provided anchors-attributes do not exists in the model")
+            all_codes <- rbindlist(list(top_codes, attr_codes))
+            # sort the data to load
             am.order <- c("anchor" = 1L, "knot" = 2L, "attribute" = 3L, "tie" = 4L) # order of AMobj
-            top_codes <- self$read(names(mapping))[,.(code, class),keyby=.(am.order[class])] # reorder codes for execution
-            browser()
-            # DEV: add attributes to exec list, handle correctly historize - no auto hist, only by column field, metadata logs another historization
-            # attr_list <- lapply(top_codes[class=="anchor", code], function(anchor) names(mapping[[anchor]]))
-            # mapping[names(mapping) %chin% top_codes[class=="anchor", code]
-            # mne %chin% names(mapping[[obj$anchor]])
-            # mapping[[obj$anchor]]
-            # nest_codes <- self$read(class="attribute")[sapply(obj, function(obj) obj$anchor %chin% top_codes), code]
-            all_codes <- c(top_codes, nest_codes)
+            all_codes <- all_codes[, .(code, class), keyby=.(am.order[class])] # reorder codes for execution
             # first pass loop, only check if mapping matches, fill defaults, etc.
-            for(code in all_codes){
+            for(code in all_codes$code){
                 iter <- self$read(code)[, .(mne,name,class,hist = sapply(obj, function(obj) isTRUE(obj$hist)),knot = sapply(obj, function(obj) as.character(obj$knot)[1L]),anchor = sapply(obj, function(obj) as.character(obj$anchor)[1L]))]
-                if(length(iter$knot)){
-                    if(!iter$knot %chin% top_codes) stop("Cannot load knotted attribute/tie without also loading knot for it, provide knot mapping.")
+                if(!is.na(iter$knot)){
+                    if(!iter$knot %chin% top_codes[class=="knot", code]) stop("Cannot load knotted attribute/tie without also loading knot for it, provide knot mapping.")
                 } # check if knotted
                 if(isTRUE(iter$hist)){
                     if(iter$class=="attribute"){
@@ -158,7 +159,7 @@ AM <- R6Class(
                 } # check if historized must containt field "hist"
                 if(iter$class=="anchor"){
                     if(length(mapping[[iter$mne]]) == 0L){
-                        if(!paste(iter$mne,"ID",sep="_") %chin% names(data)) stop(paste0("If anchor ID field was not provided it has to be in naming convention '",paste(iter$mne,"ID",sep="_"),"' (as IM class produces, see ?IM), otherwise provide anchor ID source in the data set by adding `'AC'` or `c(x = 'AC')` into anchor mapping."))
+                        if(!paste(iter$mne,"ID",sep="_") %chin% names(data)) stop(paste0("If anchor ID field was not provided it has to be in naming convention '",paste(iter$mne,"ID",sep="_"),"' (as IM class produces, see ?IM), otherwise provide anchor ID source column as unnamed character 'AC' into anchor mapping."))
                         mapping[[iter$mne]][[paste_(iter$mne,"ID")]] <- paste_(iter$mne,"ID")
                     } # use automapping for default naming convention column, [mne]_ID
                     if(!all(sapply(names(mapping[[iter$mne]]), function(child_mne) is.null(names(mapping[[iter$mne]][[child_mne]])) || all(names(mapping[[iter$mne]][[child_mne]]) %chin% c("","anchors","anchor","roles","identifier","knot","hist"))))){
