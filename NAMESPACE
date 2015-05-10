@@ -2,5 +2,8 @@
 
 export(AM)
 export(IM)
+export(actor.am)
+export(actor.data)
+export(run_anchor_modeler)
 import(R6)
 import(data.table)
