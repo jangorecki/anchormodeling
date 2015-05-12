@@ -22,11 +22,10 @@ AM <- R6Class(
             invisible(self)
         },
         print = function(size.units = getOption("am.size.format")){
-            basic_stats <- quote(self$read()[, hist := sapply(obj, function(obj) isTRUE(obj$hist))
-                                             ][, knot := sapply(obj, function(obj) as.character(obj$knot)[1L])
-                                               ][, size := am.size.format(lapply(obj, function(obj) obj$size()), units = size.units)
+            basic_stats <- quote(self$read()[, size := am.size.format(lapply(obj, function(obj) obj$size()), units = size.units)
                                                  ][, rows := sapply(obj, function(obj) nrow(obj$data))
-                                                   ])
+                                                   ][, .(name, class, mne, desc, obj, hist, knot, size, rows),, .(code)
+                                                     ])
             lkp_etl_logs <- quote(self$etl[order(timestamp), tail(.SD,1L),, code])
             if(nrow(self$etl) == 0L){
                 print(eval(basic_stats))
@@ -104,6 +103,19 @@ AM <- R6Class(
         },
         run = function(){
             if(!self$validate()) stop("AM definition is invalid, see am$validate body for conditions")
+            new.cols <- c("hist","knot","anchor","anchors","parents","childs")
+            exist.cols <- new.cols[new.cols %chin% names(self$data)]
+            if(length(exist.cols)) self$data[, eval(exist.cols) := NULL]
+            self$data[class %chin% c("attribute","tie"), hist := sapply(obj, function(obj) isTRUE(obj$hist))
+                      ][class %chin% c("attribute","tie"), knot := sapply(obj, function(obj) as.character(obj$knot)[1L])
+                        ]
+            self$data[class=="attribute", anchor := sapply(obj, function(obj) as.character(obj$anchor))
+                      ][class=="tie", anchors := lapply(obj, function(obj) as.character(obj$anchors))
+                        ]
+            self$data[class=="attribute", parents := lapply(obj, function(obj) c(as.character(obj$knot), as.character(obj$anchor)))
+                      ]
+            self$data[self$read(class="attribute")[,.(childs = list(code)),,anchor], childs := i.childs
+                      ]
             private$instance_run <- TRUE
             private$log_list <- c(private$log_list, list(list(event = "AM instance started", obj = NA_character_, timestamp = Sys.time())))
             invisible(self)

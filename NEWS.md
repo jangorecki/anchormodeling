@@ -1,5 +1,6 @@
 # anchormodeling 0.3
 
+- [ ] nest IM in AM to manage identities of anchors/knots
 - [ ] ETL for loading data
 - [ ] more unit tests
 
