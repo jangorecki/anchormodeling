@@ -41,7 +41,7 @@ AMobj <- R6Class(
             init <- length(self$data)==0L
             if(!init){
                 # check data types
-                stopifnot(identical(sapply(self$data, typeof), sapply(data, typeof)))
+                stopifnot(identical(sapply(self$data, class1), sapply(data, class1)))
                 # keep only new
                 setkeyv(data, self$keys)
                 # insert unique by PK including historization col, check if is.na on first key col, then subset

@@ -43,7 +43,7 @@ AM <- R6Class(
             if(class=="attribute"){
                 if(missing(anchor)) stop("Provide anchor mnemonic of the attribute, use `anchor` argument")
                 anch <- anchor
-            } else if(!missing(anchor)) stop("anchor attribute is used only by attributes, if you are tryng to create tie, use `anchors` argument")
+            } else if(!missing(anchor)) stop("`anchor` argument in definition is used only by attributes, if you are tryng to create tie, use `anchors` argument")
             rm(anchor)
             obj = switch(class,
                          "anchor" = anchor$new(...),
