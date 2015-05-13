@@ -2,6 +2,7 @@
 
 - [ ] nest IM in AM to manage identities of anchors/knots
 - [ ] ETL for loading data
+- [ ] mapping and loading redesign
 - [ ] more unit tests
 
 

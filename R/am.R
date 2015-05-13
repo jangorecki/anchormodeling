@@ -132,11 +132,14 @@ AM <- R6Class(
                 is.list(mapping),
                 length(mapping)>0L,
                 is.data.table(data),
-                all(names(mapping) %chin% self$data$mne) # exists in defined AM
+                all(names(mapping) %chin% self$data$mne), # exists in defined AM
+                length(names(data))==uniqueN(names(data)) # no duplicate names in `data` allowed
             )
-            if(!all(unlist(mapping) %chin% names(data))){
-                stop(paste0("Following columns defined in mapping don't exists in income data: ", paste(unlist(mapping)[!unlist(mapping) %chin% names(data)], collapse=", ")))
-            } # src columns exists in data to load
+            if(!all(sapply(mapping, function(x, data.names) sapply(x, valid_entity_params, data.names), data.names = names(data)))){
+               stop(paste0("Invalid entity params provided which should be already catched. A debug on `valid_entity_params`"))
+            } # src columns "" / NULL exists in data to load
+            browser()
+            # DEV in design notes here:
             if(!all(names(mapping) %chin% self$read(class = c("anchor","knot", "tie"))[,mne])){
                 stop(paste0("In the mapping definition attribute mappings should be provided as sublists of anchors, related to: ", paste(names(mapping)[names(mapping) %chin% self$read(class = c("anchor","knot", "tie"))], collapse=", ")))
             } # nodes in mapping not attributes - attributes must be nested in anchors

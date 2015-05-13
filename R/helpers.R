@@ -44,3 +44,17 @@ class1 <- function(x) class(x)[1L]
 #     classes[nchar_mne==9L] <- "tie" # knotted tie
 #     classes
 # }
+
+# validate mapping entities
+valid_entity_params <- function(x, data.names){
+    # to apply on each entity def:
+    # AC = list("name",
+    #           NAM = c("name", hist="name_date"))
+    if(is.null(names(x)) && length(x)==1L) return(TRUE)
+    else if(is.null(names(x)) && length(x)>1L) stop("Provide named character vector of entity definition, use `knot`, `hist`")
+    else if(!all(x[names(x) %chin% c("","hist")] %chin% data.names)) stop(paste0("All unnamed elements of the mapping list must be existing column names of data. Fix mapping definition for src fields: ", paste(x[!x[names(x) %chin% c("","hist")] %chin% data.names], collapse=",")))
+    else if(!all(names(x) %chin% c("","hist","knot"))) stop(paste0('Mapping of entity must be character vector named in: "", hist, knot.'))
+    TRUE
+}
+# all(sapply(mapping, function(x) sapply(x, valid_entity_params)))
+
