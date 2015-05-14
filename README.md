@@ -4,8 +4,8 @@
 
 - [x] Anchor Model metadata manager.  
 - [x] Export model to XML loadable in [Anchor Modeler](roenbaeck.github.io/anchor/).
-- [ ] Built-in Identity Management to generate surrogate keys.
 - [ ] In-memory AM Data Warehouse instances.
+- [ ] Built-in Identity Management to generate surrogate keys.
 - [ ] High performance engine thanks to [data.table](https://github.com/Rdatatable/data.table/wiki).
 
 Still prototype.

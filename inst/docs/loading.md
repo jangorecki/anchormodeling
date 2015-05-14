@@ -1,12 +1,14 @@
 Some useful design notes:
 
 - [ ] loading process, two pass: detailed validation then loading
-  - [ ] $load.AM
+  - [ ] AM$load
     - [x] unique names `length(names(data))==uniqueN(names(data))`
-    - [ ] model-mapping validation
-      - [ ] multiple *exists*/*valid* checks
+    - [x] model-mapping validation
+      - [x] multiple *exists*/*valid* checks
         - [x] any nested element with `"" / NULL / hist` name must exists in incoming data
+    - [ ] prepare sequence of loading
     - [ ] child classes related validation
+    - [ ] surrogate key gen function based on nk
     - [ ] check NK (provide by anchor and *src cols*)
       - [ ] exists in incoming data
       - [ ] exists in currently using mapping
@@ -14,15 +16,14 @@ Some useful design notes:
       - [ ] on related mapping if NK target is unknotted non-historized attribute
       - [ ] if loading of NK attribute is not listed in the mapping for which anchor is loaded. Add attributes to load (taken from the anchor definition) which forms anchor natural keys and were not listed in mapping as attributes
         - [ ] force `if(getOption("am.verbose")) message(paste0("Including in the mapping loading of natural keys as attributes, it has to be loaded to maintain identities. Add them to mapping to suppress this message: "paste(paste(code, nk), collapse=", ")))` 
-    - [ ] surrogate key gen function based on nk
     - [ ] call $load.AMobj just with a subset of cols
     - [ ] rename *src cols* to *tbl cols*
-  - [ ] $load.AMobj
+  - [ ] AMobj$load
     - [ ] validate nrow
     - [ ] data types validation - except first load
     - [ ] add metadata id
     - [ ] restatement
     - [ ] append log
-  - [ ] $insert.AMobj
+  - [ ] AMobj$insert
     - [ ] rbindlist
     - [ ] resetkey

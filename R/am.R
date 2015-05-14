@@ -135,21 +135,25 @@ AM <- R6Class(
                 all(names(mapping) %chin% self$data$mne), # exists in defined AM
                 length(names(data))==uniqueN(names(data)) # no duplicate names in `data` allowed
             )
+            if(!all(names(mapping) %chin% self$read(class = c("anchor"))$mne)){
+                stop(paste0("In the mapping definition names should be mne of anchors, related to: ", paste(names(mapping)[names(mapping) %chin% self$read(class = c("anchor"))], collapse=", ")))
+            } # nodes in mapping only anchors, handle: add tie, attributes nested, knots autoloaded, maybe tie autoloading too?
             if(!all(sapply(mapping, function(x, data.names) sapply(x, valid_entity_params, data.names), data.names = names(data)))){
-               stop(paste0("Invalid entity params provided which should be already catched. A debug on `valid_entity_params`"))
-            } # src columns "" / NULL exists in data to load
+               stop(paste0("Invalid entity params provided, it should already be catched. A debug on `valid_entity_params`"))
+            } # src columns "" / NULL exists in data to load # apply over elements in the mapping and then over names of each attribute definition
+            model_all_attr_codes_for_anchors <- setNames(self$read(names(mapping))$childs, names(mapping))
+            model_attrs_lkp <- quote(self$read(unique(unlist(model_all_attr_codes_for_anchors)))[, .(code),, .(anchor, mne)])
+            mapping_attrs_dt <- rbindlist(lapply(names(mapping), function(nm) data.table(anchor = nm, mne = names(mapping[[nm]]))))
+            setkeyv(mapping_attrs_dt, c("anchor","mne"))
+            mapping_attrs_dt[ eval(model_attrs_lkp), code := i.code]
+            if(any(is.na(mapping_attrs_dt$code))){
+                stop(paste0("Some of the provided attributes do not exists in the model: ", paste(mapping_attrs_dt[is.na(code), paste(anchor, mne, sep="_")], collapse=", ")))
+            } # all provided attributes in the mapping exists in model for those anchors
+
+            # prepare sequence of processing
             browser()
-            # DEV in design notes here:
-            if(!all(names(mapping) %chin% self$read(class = c("anchor","knot", "tie"))[,mne])){
-                stop(paste0("In the mapping definition attribute mappings should be provided as sublists of anchors, related to: ", paste(names(mapping)[names(mapping) %chin% self$read(class = c("anchor","knot", "tie"))], collapse=", ")))
-            } # nodes in mapping not attributes - attributes must be nested in anchors
-            # extract nested attributes fro the anchors
-            top_codes <- self$read(names(mapping))[,.(code, class)]
-            attr_list <- lapply(top_codes[class=="anchor", setNames(code,code)], function(anchor) data.table(anchor = anchor, mne = names(mapping[[anchor]])[nchar(names(mapping[[anchor]])) > 0L])) # exclude "" field = anchor ID mapping
-            attr_for_anchors <- self$read(class="attribute")[sapply(obj, function(obj) obj$anchor %chin% top_codes[class=="anchor", code]), .(code, class, mne, anchor = sapply(obj, function(obj) obj$anchor))]
-            setkeyv(attr_for_anchors, c("anchor","mne"))
-            attr_codes <- attr_for_anchors[rbindlist(attr_list), .(code, class)]
-            if(any(is.na(attr_codes$code))) stop("Some of the provided anchors-attributes do not exists in the model")
+            #  DEV
+
             all_codes <- rbindlist(list(top_codes, attr_codes))
             # sort the data to load
             am.order <- c("anchor" = 1L, "knot" = 2L, "attribute" = 3L, "tie" = 4L) # order of AMobj

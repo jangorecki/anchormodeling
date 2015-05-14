@@ -30,10 +30,10 @@ am.size.format <-  function(x, units = "auto"){
 
 class1 <- function(x) class(x)[1L]
 
-# #' @title Guess class based on mnemonic
-# #' @param mne character mnemonic in AM naming convention
-# #' @details Limited only to mnemonics AM naming convention and ties with no more than 2 anchors.
-# #' @return character anchor/attribute/tie/knot
+# # @title Guess class based on mnemonic
+# # @param mne character mnemonic in AM naming convention
+# # @details Limited only to mnemonics AM naming convention and ties with no more than 2 anchors.
+# # @return character anchor/attribute/tie/knot
 # class.mne <- function(mne){
 #     nchar_mne <- nchar(mne)
 #     classes <- rep(NA_character_,length(mne))
@@ -45,8 +45,9 @@ class1 <- function(x) class(x)[1L]
 #     classes
 # }
 
-# validate mapping entities
 valid_entity_params <- function(x, data.names){
+    # valid_entity_params
+    # all(sapply(mapping, function(x) sapply(x, valid_entity_params)))
     # to apply on each entity def:
     # AC = list("name",
     #           NAM = c("name", hist="name_date"))
@@ -56,5 +57,5 @@ valid_entity_params <- function(x, data.names){
     else if(!all(names(x) %chin% c("","hist","knot"))) stop(paste0('Mapping of entity must be character vector named in: "", hist, knot.'))
     TRUE
 }
-# all(sapply(mapping, function(x) sapply(x, valid_entity_params)))
 
+selfNames <- function(x) setNames(x, x)
