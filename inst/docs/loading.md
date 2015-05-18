@@ -1,5 +1,15 @@
 Some useful design notes:
 
+- [ ] loading model unit tests:
+  - [ ] one flat data
+  - [ ] two flat data
+  - [ ] multiple flat data
+- [ ] ETL template:
+  - [ ] isolate single anchor loading
+  - [ ] model processing of single anchor load as atomic operation
+    - [ ] NO calls like `self$data <- rbindlist(...)`
+    - [ ] as easy as lapply
+    - [ ] make it parallal
 - [ ] loading process, two pass: detailed validation then loading
   - [ ] AM$load
     - [x] unique names `length(names(data))==uniqueN(names(data))`
@@ -7,6 +17,10 @@ Some useful design notes:
       - [x] multiple *exists*/*valid* checks
         - [x] any nested element with `"" / NULL / hist` name must exists in incoming data
     - [ ] prepare sequence of loading
+      - [ ] anchors
+      - [ ] knots
+      - [ ] attributes
+      - [ ] ties
     - [ ] child classes related validation
     - [ ] surrogate key gen function based on nk
     - [ ] check NK (provide by anchor and *src cols*)
