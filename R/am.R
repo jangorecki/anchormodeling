@@ -26,7 +26,7 @@ AM <- R6Class(
                                                  ][, rows := sapply(obj, function(obj) nrow(obj$data))
                                                    ][, .(name, class, mne, desc, obj, hist, knot, size, rows),, .(code)
                                                      ])
-            lkp_etl_logs <- quote(self$etl[order(timestamp), tail(.SD,1L),, code])
+            lkp_etl_logs <- quote(self$etl[order(timestamp), tail(.SD, 1L),, code])
             if(nrow(self$etl) == 0L){
                 print(eval(basic_stats))
                 return(invisible(self))
@@ -51,7 +51,7 @@ AM <- R6Class(
                          "tie" = tie$new(...),
                          "knot" = knot$new(...),
                          stop("Anchor model objects must be anchor/attribute/tie/knot."))
-            self$data <- rbindlist(list(self$data, data.table(code = obj$code, name = obj$name, class = class, mne = as.character(obj$mne)[1L], desc = as.character(obj$desc)[1L], obj = list(obj))))
+            self$data <- rbindlist(list(self$data, data.table(code = obj$code, name = obj$name, class = class, mne = as.character(obj$mne)[1L], desc = as.character(obj$desc)[1L], obj = list(obj), hist = isTRUE(obj$hist), knot = as.character(obj$knot)[1L])))
             setkeyv(self$data, c("code"))[]
             private$log_list <- c(private$log_list, list(list(event = "create", obj = obj$code, timestamp = Sys.time())))
             invisible(self)
@@ -103,12 +103,9 @@ AM <- R6Class(
         },
         run = function(){
             if(!self$validate()) stop("AM definition is invalid, see am$validate body for conditions")
-            new.cols <- c("hist","knot","anchor","anchors","parents","childs")
+            new.cols <- c("anchor","anchors","parents","childs")
             exist.cols <- new.cols[new.cols %chin% names(self$data)]
             if(length(exist.cols)) self$data[, eval(exist.cols) := NULL]
-            self$data[class %chin% c("attribute","tie"), hist := sapply(obj, function(obj) isTRUE(obj$hist))
-                      ][class %chin% c("attribute","tie"), knot := sapply(obj, function(obj) as.character(obj$knot)[1L])
-                        ]
             self$data[class=="attribute", anchor := sapply(obj, function(obj) as.character(obj$anchor))
                       ][class=="tie", anchors := lapply(obj, function(obj) as.character(obj$anchors))
                         ]
@@ -142,10 +139,10 @@ AM <- R6Class(
                stop(paste0("Invalid entity params provided, it should already be catched. A debug on `valid_entity_params`"))
             } # src columns "" / NULL exists in data to load # apply over elements in the mapping and then over names of each attribute definition
             model_all_attr_codes_for_anchors <- setNames(self$read(names(mapping))$childs, names(mapping))
-            model_attrs_lkp <- quote(self$read(unique(unlist(model_all_attr_codes_for_anchors)))[, .(code),, .(anchor, mne)])
+            model_attrs_lkp <- quote(self$read(unique(unlist(model_all_attr_codes_for_anchors)))[, .(code, hist, knot),, .(anchor, mne)])
             mapping_attrs_dt <- rbindlist(lapply(names(mapping), function(nm) data.table(anchor = nm, mne = names(mapping[[nm]]))))
             setkeyv(mapping_attrs_dt, c("anchor","mne"))
-            mapping_attrs_dt[ eval(model_attrs_lkp), code := i.code]
+            mapping_attrs_dt[ eval(model_attrs_lkp), `:=`(code = i.code, hist = i.hist, knot = i.knot)]
             if(any(is.na(mapping_attrs_dt$code))){
                 stop(paste0("Some of the provided attributes do not exists in the model: ", paste(mapping_attrs_dt[is.na(code), paste(anchor, mne, sep="_")], collapse=", ")))
             } # all provided attributes in the mapping exists in model for those anchors
