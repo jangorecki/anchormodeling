@@ -15,6 +15,7 @@ AM <- R6Class(
     classname = "AM",
     public = list(
         data = data.table(NULL),
+        im = IM$new(),
         initialize = function(naming = c("anchor" = 2L, "attribute" = 3L, "knot" = 3L), hist_col = "ChangedAt"){
             private$naming <- naming # not yet used
             private$hist_col <- hist_col # not yet used
@@ -118,7 +119,7 @@ AM <- R6Class(
             invisible(self)
         },
         # ETL
-        load = function(mapping, data, meta = NA_integer_, .args){
+        load = function(mapping, data, meta = NA_integer_, .args, use.im=FALSE){
             if(!isTRUE(private$instance_run)) stop("Run DW instance by am$run()")
             if(!missing(.args)){
                 data <- .args[["data"]]
@@ -146,11 +147,12 @@ AM <- R6Class(
             if(any(is.na(mapping_attrs_dt$code))){
                 stop(paste0("Some of the provided attributes do not exists in the model: ", paste(mapping_attrs_dt[is.na(code), paste(anchor, mne, sep="_")], collapse=", ")))
             } # all provided attributes in the mapping exists in model for those anchors
-
-            # prepare sequence of processing
             browser()
             #  DEV
-
+            if(isTRUE(use.im)){
+                im$use(data, mne = c(NA), in.place = TRUE)
+            } # auto Identity Management
+            # prepare sequence of processing
             all_codes <- rbindlist(list(top_codes, attr_codes))
             # sort the data to load
             am.order <- c("anchor" = 1L, "knot" = 2L, "attribute" = 3L, "tie" = 4L) # order of AMobj

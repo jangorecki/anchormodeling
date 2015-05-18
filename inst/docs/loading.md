@@ -1,12 +1,16 @@
-Some useful design notes:
+# Design notes FOR am$load method:
 
 - [ ] loading model unit tests:
   - [ ] one flat data
   - [ ] two flat data
   - [ ] multiple flat data
 - [ ] ETL template:
-  - [ ] isolate single anchor loading
-  - [ ] model processing of single anchor load as atomic operation
+  - [ ] isolate IM - loading anchors
+    - [ ] lookup anchor PK from local anchor table to incoming data
+    - [ ] generate new PK for new rows
+    - [ ] write new rows to anchor
+    - [ ] include just im$use() ?
+  - [ ] isolate single anchor loading: model processing of single anchor load as atomic operation
     - [ ] NO calls like `self$data <- rbindlist(...)`
     - [ ] as easy as lapply
     - [ ] make it parallal
