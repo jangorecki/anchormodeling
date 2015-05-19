@@ -28,7 +28,7 @@ ui <- dashboardPage(
 
 server <- function(input, output) {
 
-    output$am <- DT::renderDataTable(DT::datatable(AM()$process(pretty=TRUE)))
+    output$am <- DT::renderDataTable(DT::datatable(AM()$process(pretty=TRUE), rownames=FALSE))
 
     view <- reactive({
         validate(need(is.character(input$view), message = "Invalid view name"))
@@ -37,7 +37,7 @@ server <- function(input, output) {
         AM()$read(input$view)$obj[[1L]]$data # use $view(input$view) when ready
     })
 
-    output$data <- DT::renderDataTable(DT::datatable(view()))
+    output$data <- DT::renderDataTable(DT::datatable(view(), rownames=FALSE))
 
 }
 
