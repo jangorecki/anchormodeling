@@ -21,9 +21,10 @@ AM <- R6Class(
             private$hist_col <- hist_col # not yet used
             private$log_list <- list(list(event = "initialize AM", obj = NA_character_, timestamp = Sys.time()))
             im <<- IM$new()
-            private$log_list <- list(list(event = "initialize IM", obj = NA_character_, timestamp = Sys.time()))
+            private$log_list <- c(private$log_list, list(list(event = "initialize IM", obj = NA_character_, timestamp = Sys.time())))
             invisible(self)
         },
+        IM = function() im,
         process = function(pretty = FALSE, size.units = getOption("am.size.format")){
             basic_stats <- quote(self$read()[, size := am.size.format(lapply(obj, function(obj) obj$size()), units = size.units)
                                              ][, rows := sapply(obj, function(obj) nrow(obj$data))
@@ -39,7 +40,11 @@ AM <- R6Class(
                                   ]
         },
         print = function(size.units = getOption("am.size.format")){
-            self$process(size.units=size.units)[, print(.SD)]
+            if(nrow(self$data)==0L){
+                cat("Empty Anchor Model\n", sep="")
+            } else {
+                self$process(size.units=size.units)[, print(.SD)]
+            }
             invisible(self)
         },
         # CRUD
@@ -90,6 +95,7 @@ AM <- R6Class(
         },
         # RUN
         validate = function(){
+            if(nrow(self$data)==0L) stop("Anchor Model objects not defined.")
             setkeyv(self$data, "code")[]
             set2keyv(self$data, "class")[]
             all(
@@ -124,7 +130,7 @@ AM <- R6Class(
             invisible(self)
         },
         # ETL
-        load = function(mapping, data, meta = NA_integer_, .args, use.im=FALSE){
+        load = function(mapping, data, meta = NA_integer_, .args, use.im=TRUE){
             if(!isTRUE(private$instance_run)) stop("Run DW instance by am$run()")
             if(!missing(.args)){
                 data <- .args[["data"]]
@@ -146,24 +152,28 @@ AM <- R6Class(
             } # src columns "" / NULL exists in data to load # apply over elements in the mapping and then over names of each attribute definition
             model_all_attr_codes_for_anchors <- setNames(self$read(names(mapping))$childs, names(mapping))
             model_attrs_lkp <- quote(self$read(unique(unlist(model_all_attr_codes_for_anchors)))[, .(code, hist, knot),, .(anchor, mne)])
-            mapping_attrs_dt <- rbindlist(lapply(names(mapping), function(nm) data.table(anchor = nm, mne = names(mapping[[nm]]))))
+            mapping_attrs_dt <- rbindlist(lapply(names(mapping), function(nm) data.table(anchor = nm, mne = names(mapping[[nm]])[names(mapping[[nm]]) != ""]))) # exclude anchor NK
             setkeyv(mapping_attrs_dt, c("anchor","mne"))
+            # TODO move first pass loop checks here? if knot provided, if hist provided
             mapping_attrs_dt[ eval(model_attrs_lkp), `:=`(code = i.code, hist = i.hist, knot = i.knot)]
             if(any(is.na(mapping_attrs_dt$code))){
                 stop(paste0("Some of the provided attributes do not exists in the model: ", paste(mapping_attrs_dt[is.na(code), paste(anchor, mne, sep="_")], collapse=", ")))
             } # all provided attributes in the mapping exists in model for those anchors
-            browser()
-            #  DEV
-            if(isTRUE(use.im)){
-                im$use(data, mne = c(NA), in.place = TRUE)
-            } # auto Identity Management
+            if(use.im){
+                data <- im$use(data, mne = mapping_attrs_dt[, unique(na.omit(c(anchor, knot)))], nk = lapply(mapping, `[[`, 1L), in.place = FALSE)
+            } # auto Identity Management: anchors and knots get ID in incoming data and in am$IM() but not yet in obj$data
             # prepare sequence of processing
-            all_codes <- rbindlist(list(top_codes, attr_codes))
-            # sort the data to load
-            am.order <- c("anchor" = 1L, "knot" = 2L, "attribute" = 3L, "tie" = 4L) # order of AMobj
-            all_codes <- all_codes[, .(code, class), keyby=.(am.order[class])] # reorder codes for execution
+            load_seq <- setkeyv(rbindlist(
+                list(
+                    mapping_attrs_dt[, .(class = "anchor", mne = anchor, code = anchor, hist = FALSE, knot = NA_character_), .(anchor)],
+                    mapping_attrs_dt[!is.na(knot), .(anchor = NA_character_, class = "knot", mne = knot, code = knot, hist = FALSE, knot = NA_character_), .(byknot = knot)][, .SD, .SDcols=-"byknot"],
+                    mapping_attrs_dt[, .(anchor, class = "attribute", mne, code, hist, knot)]
+                )), c("anchor","class"))
+            set2keyv(load_seq, "code")
             # first pass loop, only check if mapping matches, fill defaults, etc.
-            for(code in all_codes$code){
+            for(load_code in load_seq$code){
+                browser()
+                # load_seq[code==load_code, !is.na(knot)]
                 iter <- self$read(code)[, .(mne,name,class,hist = sapply(obj, function(obj) isTRUE(obj$hist)),knot = sapply(obj, function(obj) as.character(obj$knot)[1L]),anchor = sapply(obj, function(obj) as.character(obj$anchor)[1L]))]
                 if(!is.na(iter$knot)){
                     if(!iter$knot %chin% top_codes[class=="knot", code]) stop("Cannot load knotted attribute/tie without also loading knot for it, provide knot mapping.")
@@ -232,7 +242,12 @@ AM <- R6Class(
             invisible(self)
         },
         query = function(){
-            # self$data
+            # intermediate step to self$data to support db connection?
+            stop("not yet ready, use am$read()")
+        },
+        view = function(key){
+            # denormalize to 3NF
+            # optionally setkey
             stop("not yet ready, use am$read()")
         },
         xml = function(file = format(Sys.time(),"AM_%Y%m%d_%H%M%S.xml")){
@@ -250,6 +265,17 @@ AM <- R6Class(
             private$log_list <- c(private$log_list, list(list(event = "AM model exported", obj = file, timestamp = Sys.time())))
             write(lines, file=file, append=FALSE)
             invisible(file)
+        },
+        dashboard = function(){
+            if(!isTRUE(private$instance_run)) stop("Run DW instance by am$run()")
+            suggests_deps <- c("shiny","shinydashboard","DT")
+            if(!all(sapply(suggests_deps, requireNamespace, quietly=TRUE))){
+                stop(paste0("install required packages: ",paste(suggests_deps[!sapply(suggests_deps, requireNamespace, quietly=TRUE)], collapse=", ")))
+            } else {
+                options("am.share" = self)
+                shiny::runApp(system.file("app","monitor", package = "anchormodeling"))
+            }
+            invisible(self)
         }
     ),
     private = list(

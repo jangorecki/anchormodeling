@@ -54,16 +54,20 @@ IM <- R6Class(
         size = function(mne){
             if(missing(mne)) object.size(self$ID) else object.size(self$ID[[mne]])
         },
-        use = function(data, mne , in.place = FALSE){
+        use = function(data, mne, nk, in.place = FALSE){
             # check inputs
             stopifnot(is.data.table(data), nrow(data) > 0L, is.character(mne), length(mne) > 0L)
-            # check valid mne
-            stopifnot(all(mne %chin% names(self$NK)))
             # check if no mne_ID cols in the data which would be overwritten
             stopifnot(all(!paste(mne,"ID",sep="_") %chin% names(data)))
             # iterate over mne to update IM with new ID
             mnes <- mne
             for(mne in mnes){
+                # dynamically initilize new ID management
+                if(!mne %chin% names(self$NK)){
+                    if(missing(nk)) stop("Each new anchor/knot to be handled by auto identity management should have natural keys provided as nk arg, the list of natural key cols named by mne.")
+                    if(!mne %chin% names(nk)) stop(paste0("Each new anchor/knot to be handled by auto identity management should have natural keys provided as nk arg, the list of natural key cols named by mne. Missing natural keys for: ",mne))
+                    self$create(mne = mne, nk = nk[[mne]])
+                }
                 # check nk names
                 stopifnot(all(self$NK[[mne]] %chin% names(data)))
                 init_ID <- length(self$ID[[mne]])==0L # check if first time used

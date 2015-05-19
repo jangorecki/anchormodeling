@@ -26,5 +26,9 @@ test_that("IM process", {
     expect_identical(im$NK[["AC"]],c("actor_code1", "actor_code2"), info="composite natural key")
     expect_identical(names(data.sk),c("actor_code1", "actor_name", "actor_code2", "AC_ID"), info="composite natural key use method output")
     expect_true(data.sk[is.na(AC_ID), .N == 0L], info="no NA surrogate keys from composite natural key")
+    # auto im$create while im$use
+    # info="auto im$create"
+    # info="tried auto im$create with missing nk"
+    # info="tried auto im$create with missing nk[[mne]]"
 
 })

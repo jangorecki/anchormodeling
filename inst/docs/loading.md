@@ -5,11 +5,11 @@
   - [ ] two flat data
   - [ ] multiple flat data
 - [ ] ETL template:
-  - [ ] isolate IM - loading anchors
-    - [ ] lookup anchor PK from local anchor table to incoming data
-    - [ ] generate new PK for new rows
-    - [ ] write new rows to anchor
-    - [ ] include just im$use() ?
+  - [x] isolate IM - loading anchors
+    - [x] lookup anchor PK from local IM table to incoming data
+    - [x] generate new PK for new rows
+    - [x] write new rows to IM
+    - [x] include just im$use()
   - [ ] isolate single anchor loading: model processing of single anchor load as atomic operation
     - [ ] NO calls like `self$data <- rbindlist(...)`
     - [ ] as easy as lapply
@@ -20,20 +20,16 @@
     - [x] model-mapping validation
       - [x] multiple *exists*/*valid* checks
         - [x] any nested element with `"" / NULL / hist` name must exists in incoming data
-    - [ ] prepare sequence of loading
-      - [ ] anchors
-      - [ ] knots
-      - [ ] attributes
+    - [x] surrogate key gen function based on nk
+    - [x] check NK (provide by anchor and *src cols*)
+      - [x] exists in incoming data
+      - [x] exists in currently using mapping
+    - [x] prepare sequence of loading
+      - [x] knots - parallel
+      - [x] anchors - parallel
+        - [x] attributes
       - [ ] ties
     - [ ] child classes related validation
-    - [ ] surrogate key gen function based on nk
-    - [ ] check NK (provide by anchor and *src cols*)
-      - [ ] exists in incoming data
-      - [ ] exists in currently using mapping
-      - [ ] on related mapping if NK target entity exists in the model
-      - [ ] on related mapping if NK target is unknotted non-historized attribute
-      - [ ] if loading of NK attribute is not listed in the mapping for which anchor is loaded. Add attributes to load (taken from the anchor definition) which forms anchor natural keys and were not listed in mapping as attributes
-        - [ ] force `if(getOption("am.verbose")) message(paste0("Including in the mapping loading of natural keys as attributes, it has to be loaded to maintain identities. Add them to mapping to suppress this message: "paste(paste(code, nk), collapse=", ")))` 
     - [ ] call $load.AMobj just with a subset of cols
     - [ ] rename *src cols* to *tbl cols*
   - [ ] AMobj$load
