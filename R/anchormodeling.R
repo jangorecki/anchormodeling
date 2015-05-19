@@ -98,3 +98,13 @@ actor.data <- function(src = "Stage", iteration = 1L){
     } else stop("unknown src/iteration")
     rbindlist(r)
 }
+
+monitor <- function(am){
+    options("am.share" = am)
+    if(!requireNamespace("shiny", quietly=TRUE) | !requireNamespace("DT", quietly=TRUE)){
+        stop(paste0("install required packages: ",paste(c("shiny","DT")[c(requireNamespace("shiny", quietly=TRUE), requireNamespace("DT", quietly=TRUE))], collapse=", ")))
+    } else {
+        shiny::runApp(system.file("app","monitor", package = "anchormodeling"))
+    }
+}
+

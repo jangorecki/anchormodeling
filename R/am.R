@@ -15,26 +15,31 @@ AM <- R6Class(
     classname = "AM",
     public = list(
         data = data.table(NULL),
-        im = IM$new(),
+        im = NULL,
         initialize = function(naming = c("anchor" = 2L, "attribute" = 3L, "knot" = 3L), hist_col = "ChangedAt"){
             private$naming <- naming # not yet used
             private$hist_col <- hist_col # not yet used
             private$log_list <- list(list(event = "initialize AM", obj = NA_character_, timestamp = Sys.time()))
+            im <<- IM$new()
+            private$log_list <- list(list(event = "initialize IM", obj = NA_character_, timestamp = Sys.time()))
             invisible(self)
         },
-        print = function(size.units = getOption("am.size.format")){
+        process = function(pretty = FALSE, size.units = getOption("am.size.format")){
             basic_stats <- quote(self$read()[, size := am.size.format(lapply(obj, function(obj) obj$size()), units = size.units)
-                                                 ][, rows := sapply(obj, function(obj) nrow(obj$data))
-                                                   ][, .(name, class, mne, desc, obj, hist, knot, size, rows),, .(code)
-                                                     ])
+                                             ][, rows := sapply(obj, function(obj) nrow(obj$data))
+                                               ][, .(name, class, mne, desc, obj, hist, knot, size, rows),, .(code)
+                                                 ])
             lkp_etl_logs <- quote(self$etl[order(timestamp), tail(.SD, 1L),, code])
             if(nrow(self$etl) == 0L){
-                print(eval(basic_stats))
-                return(invisible(self))
+                return(exclude.cols(eval(basic_stats), .escape = !pretty))
             }
             eval(basic_stats)[eval(lkp_etl_logs), `:=`(meta = i.meta, last_event_time = i.timestamp, event = i.event, in_nrow = i.in_nrow, unq_nrow = i.unq_nrow, load_nrow = i.load_nrow)
                               ][order(-last_event_time)
-                                ][, print(.SD)]
+                                ][, exclude.cols(.SD, .escape = !pretty)
+                                  ]
+        },
+        print = function(size.units = getOption("am.size.format")){
+            self$process(size.units=size.units)[, print(.SD)]
             invisible(self)
         },
         # CRUD

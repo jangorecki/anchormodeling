@@ -59,3 +59,5 @@ valid_entity_params <- function(x, data.names){
 }
 
 selfNames <- function(x) setNames(x, x)
+
+exclude.cols <- function(x, cols = c("obj"), .escape=FALSE) if(.escape) return(x) else x[, .SD, .SDcols = names(x)[!names(x) %chin% eval(cols)]]
