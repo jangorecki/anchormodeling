@@ -1,4 +1,4 @@
-# Design notes FOR am$load method:
+# Design notes for am$load method:
 
 - [ ] loading model unit tests:
   - [ ] one flat data
@@ -11,10 +11,10 @@
     - [x] write new rows to IM
     - [x] include just im$use()
   - [ ] isolate single anchor loading: model processing of single anchor load as atomic operation
-    - [ ] NO calls like `self$data <- rbindlist(...)`
-    - [ ] as easy as lapply
+    - [x] as easy as lapply
     - [ ] make it parallal
-- [ ] loading process, two pass: detailed validation then loading
+- [ ] loading process
+  - [ ] two pass: detailed validation in first loop
   - [ ] AM$load
     - [x] unique names `length(names(data))==uniqueN(names(data))`
     - [x] model-mapping validation
@@ -29,15 +29,15 @@
       - [x] anchors - parallel
         - [x] attributes
       - [ ] ties
-    - [ ] child classes related validation
-    - [ ] call $load.AMobj just with a subset of cols
-    - [ ] rename *src cols* to *tbl cols*
+    - [x] child classes related validation
+    - [x] call $load.AMobj just with a subset of cols
+    - [x] rename *src cols* to *tbl cols*
   - [ ] AMobj$load
-    - [ ] validate nrow
-    - [ ] data types validation - except first load
-    - [ ] add metadata id
+    - [x] validate nrow
+    - [x] data types validation - except first load
+    - [x] add metadata id
     - [ ] restatement
-    - [ ] append log
-  - [ ] AMobj$insert
-    - [ ] rbindlist
-    - [ ] resetkey
+    - [x] append log
+  - [x] AMobj$insert
+    - [x] rbindlist
+    - [x] resetkey

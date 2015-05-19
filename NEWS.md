@@ -1,9 +1,9 @@
 # anchormodeling 0.3
 
-- [ ] auto surrogate key for anchors and knots
-- [ ] nest IM in AM to manage identities
+- [x] auto surrogate key for anchors and knots
+- [x] nest IM in AM to manage identities
 - [ ] ETL for loading data
-- [ ] mapping and loading redesign
+- [x] mapping and loading redesign
 - [ ] various unit tests
 
 

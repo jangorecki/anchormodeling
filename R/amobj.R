@@ -16,39 +16,34 @@ AMobj <- R6Class(
         keys = character(),
         initialize = function() invisible(self),
         insert = function(data, db = FALSE){
-            if(nrow(data) > 0L) return(invisible(self))
-            if(!db) self$data <- setkeyv(rbindlist(list(self$data, data)), self$keys) else NULL
+            if(nrow(data) == 0L) return(invisible(self))
+            if(!db) self$data <- setkeyv(rbindlist(list(self$data, data), use.names=TRUE), self$keys) else stop("db backend not ready")
             return(invisible(self))
         },
         query = function(db = FALSE){
             if(!db) self$data else setDT(NULL)
         },
-        load = function(data, meta, .args){
-            if(!missing(.args)){
-                data <- .args[["data"]]
-                meta <- .args[["meta"]]
-            } # easier to call `load` programmatically
+        load = function(data, meta){
             stopifnot(is.data.table(data))
-
-            if(nrow(data) == 0L){
-                private$log_list <- c(private$log_list, list(list(meta = meta, timestamp = Sys.time(), mne = self$mne, event = "load", in_nrow = 0L, unq_nrow = 0L, load_nrow = 0L)))
+            in_nrow <- nrow(data)
+            Sys.sleep(0.001) # just to make timestamp better sortable
+            if(in_nrow == 0L){
+                private$log_list <- c(private$log_list, list(list(meta = meta, timestamp = Sys.time(), code = self$code, event = "load", in_nrow = 0L, unq_nrow = 0L, load_nrow = 0L)))
                 returns(invisible(self))
             }
-            in_nrow <- nrow(data)
-            data <- copy(data[, unique(.SD, by=self$keys)])[, c(self$cols[length(self$cols)]) := meta]
+            data <- copy(data)[, c(self$cols[length(self$cols)]) := meta]
             unq_nrow <- nrow(data)
             # check if first time used
             init <- length(self$data)==0L
             if(!init){
                 # check data types
                 stopifnot(identical(sapply(self$data, class1), sapply(data, class1)))
-                # keep only new
+                # take only new by PK (including hist col)
                 setkeyv(data, self$keys)
-                # insert unique by PK including historization col, check if is.na on first key col, then subset
-                data <- data[!self$data] # data[self$data, key1 := eval(as.name(paste0("i.",self$keys[1L])))][is.na(key1)][, key1 := NULL]
+                data <- data[!self$data]
             }
             self$insert(data)
-            private$log_list <- c(private$log_list, list(list(meta = meta, timestamp = Sys.time(), mne = self$mne, event = "load", in_nrow = in_nrow, unq_nrow = unq_nrow, load_nrow = nrow(data))))
+            private$log_list <- c(private$log_list, list(list(meta = meta, timestamp = Sys.time(), code = self$code, event = "load", in_nrow = in_nrow, unq_nrow = unq_nrow, load_nrow = nrow(data))))
             invisible(self)
         },
         size = function() object.size(self$data)
