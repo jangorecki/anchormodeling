@@ -27,7 +27,7 @@ AM <- R6Class(
         IM = function() im,
         process = function(pretty = FALSE, size.units = getOption("am.size.format")){
             basic_stats <- quote(self$read()[, size := am.size.format(lapply(obj, function(obj) obj$size()), units = size.units)
-                                             ][, rows := sapply(obj, function(obj) nrow(obj$data))
+                                             ][, rows := sapply(obj, function(obj) obj$nrow())
                                                ][, .(name, class, mne, desc, obj, hist, knot, size, rows),, .(code)
                                                  ])
             lkp_etl_logs <- quote(self$etl[order(timestamp), tail(.SD, 1L),, code])
@@ -188,27 +188,30 @@ AM <- R6Class(
             # first pass loop, only check if mapping matches, fill defaults, etc.
             # ?
             # loading knots
-            lapply(load_seq["knot", code, nomatch=0L], function(knot_code){
+            if.mclapply(load_seq["knot", code, nomatch=0L], function(knot_code){
                 src_cols <- load_seq[c("attribute","tie"), nomatch=0L][knot==knot_code, src_cols]
                 src_cols <- c(paste_(knot_code,"ID"), src_cols)
                 cols <- self$read(knot_code)$obj[[1L]]$cols
                 cols <- cols[-length(cols)] # exclude metadata col
+                value.name <- self$read(knot_code)$name
+                stopifnot(c(src_cols[1L], value.name) == cols)
                 self$data[knot_code, obj][[1L]]$load(
-                    data = melt(data[, src_cols, with=FALSE], id.vars = src_cols[1L], measure.vars = src_cols[-1L], value.name = self$read(knot_code)$name)[, unique(.SD), .SDcols=-"variable"], # support for multi child knots, will load from all src_cols into one
+                    data = melt(data[, src_cols, with=FALSE], id.vars = src_cols[1L], measure.vars = src_cols[-1L], value.name = value.name)[, .SD, .SDcols=-"variable"], # support for multi child knots, will load from all src_cols into one
                     meta = meta
                 )
             })
             # loading anchors
-            lapply(load_seq["anchor", code, nomatch=0L], function(anchor_code){
+            if.mclapply(load_seq["anchor", code, nomatch=0L], function(anchor_code){
                 src_cols <- load_seq[code==anchor_code, src_col]
                 cols <- self$read(anchor_code)$obj[[1L]]$cols
                 cols <- cols[-length(cols)] # exclude metadata col
+                stopifnot(src_cols == cols)
                 self$data[anchor_code, obj][[1L]]$load(
-                    data = data[, src_cols, with=FALSE][, unique(.SD)],
+                    data = data[, src_cols, with=FALSE],
                     meta = meta
                 )
                 # loading child attributes
-                lapply(load_seq[CJ("attribute", anchor_code), code, nomatch=0L], function(attr_code){
+                if.mclapply(load_seq[CJ("attribute", anchor_code), code, nomatch=0L], function(attr_code){
                     src_cols <- load_seq[code==attr_code, c(if(is.na(knot)) src_col else paste_(knot,"ID"), if(hist) hist_col else character())]
                     src_cols <- c(paste_(anchor_code,"ID"), src_cols)
                     cols <- self$read(attr_code)$obj[[1L]]$cols
@@ -220,10 +223,6 @@ AM <- R6Class(
                 })
             })
             invisible(self)
-        },
-        query = function(){
-            # intermediate step to self$data to support db connection?
-            stop("not yet ready, use am$read()")
         },
         view = function(key){
             # denormalize to 3NF

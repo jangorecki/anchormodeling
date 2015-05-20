@@ -4,15 +4,15 @@
   - [ ] one flat data
   - [ ] two flat data
   - [ ] multiple flat data
-- [ ] ETL template:
+- [X] ETL template:
   - [x] isolate IM - loading anchors
     - [x] lookup anchor PK from local IM table to incoming data
     - [x] generate new PK for new rows
     - [x] write new rows to IM
     - [x] include just im$use()
-  - [ ] isolate single anchor loading: model processing of single anchor load as atomic operation
+  - [X] isolate single anchor loading: model processing of single anchor load as atomic operation
     - [x] as easy as lapply
-    - [ ] make it parallal
+    - [X] make it parallel
 - [ ] loading process
   - [ ] two pass: detailed validation in first loop
   - [ ] AM$load

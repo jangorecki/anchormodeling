@@ -30,21 +30,6 @@ am.size.format <-  function(x, units = "auto"){
 
 class1 <- function(x) class(x)[1L]
 
-# # @title Guess class based on mnemonic
-# # @param mne character mnemonic in AM naming convention
-# # @details Limited only to mnemonics AM naming convention and ties with no more than 2 anchors.
-# # @return character anchor/attribute/tie/knot
-# class.mne <- function(mne){
-#     nchar_mne <- nchar(mne)
-#     classes <- rep(NA_character_,length(mne))
-#     classes[nchar_mne==2L] <- "anchor"
-#     classes[nchar_mne==3L] <- "knot"
-#     classes[nchar_mne==5L] <- "tie"
-#     classes[nchar_mne==6L] <- "attribute"
-#     classes[nchar_mne==9L] <- "tie" # knotted tie
-#     classes
-# }
-
 valid_entity_params <- function(x, data.names){
     # valid_entity_params
     # all(sapply(mapping, function(x) sapply(x, valid_entity_params)))
@@ -61,3 +46,15 @@ valid_entity_params <- function(x, data.names){
 selfNames <- function(x) setNames(x, x)
 
 exclude.cols <- function(x, cols = c("obj"), .escape=FALSE) if(.escape) return(x) else x[, .SD, .SDcols = names(x)[!names(x) %chin% eval(cols)]]
+
+if.mclapply <- function(..., parallel = getOption("am.parallel")){
+    if(is.null(parallel) || parallel==FALSE || !requireNamespace("parallel", quietly = TRUE)){
+        return(invisible(lapply(...)))
+    } else if(isTRUE(parallel)){
+        if(requireNamespace("parallel", quietly = TRUE)){
+            return(invisible(parallel::mclapply(...)))
+        } else {
+            stop("am.parallel is set to TRUE for parallel processing but no 'parallel' package installed.")
+        }
+    } else stop("invalid parallel argument, am.parallel option should be logical")
+}

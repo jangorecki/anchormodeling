@@ -6,8 +6,11 @@ library(testthat)
 
 load_all()
 
+options("am.restatability"=FALSE)
 am <- actor.am(3)
 am$run()
+options("am.parallel"=FALSE)
+
 
 # status checks -----------------------------------------------------------
 
@@ -52,7 +55,10 @@ am$load(mapping = mapping, data = data, meta = 1L)
 
 data <- rbindlist(list(
     actor.data("Stage", iteration = 2L),
-    data.table(name = "new name for new location", address = "new address1") # new
+    actor.data("Stage", iteration = 2L)[1:2], # rest
+    data.table(name = "new name for new location1", address = "new address1"), # new
+    data.table(name = "new name for new location2", address = "new address2"), # new
+    data.table(name = "new name for new location2", address = "new address2") # new rest
 ))[, name_date := Sys.time()]
 
 am$load(mapping = mapping, data = data, meta = 2L)

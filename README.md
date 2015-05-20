@@ -7,6 +7,7 @@
 - [ ] In-memory AM Data Warehouse instances.
 - [x] Built-in Identity Management to generate surrogate keys.
 - [ ] High performance engine thanks to [data.table](https://github.com/Rdatatable/data.table/wiki).
+- [ ] Parallel ETL.
 
 Still prototype.
 

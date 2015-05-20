@@ -20,27 +20,43 @@ AMobj <- R6Class(
             if(!db) self$data <- setkeyv(rbindlist(list(self$data, data), use.names=TRUE), self$keys) else stop("db backend not ready")
             return(invisible(self))
         },
-        query = function(db = FALSE){
-            if(!db) self$data else setDT(NULL)
+        query = function(latest = FALSE, db = FALSE){
+            if(!db){
+                if(latest) self$data[] else self$data
+            } else {
+                if(latest) setDT(NULL, key=self$keys) else setDT(NULL, key=self$keys)
+            }
+        },
+        nrow = function(db = FALSE){
+            if(!db) nrow(self$data) else NA_integer_ # as.integer(dbGetQuery(conn, paste0("SELECT COUNT(*) AS cnt FROM ",self$name,";"))$cnt)[1L]
+        },
+        types = function(db = FALSE){
+            if(!db) sapply(self$data, class1) else sapply(NULL, class1) # dbGetQuery(conn, paste0("SELECT * FROM ",self$name," LIMIT 1;"))
         },
         load = function(data, meta){
             stopifnot(is.data.table(data))
             in_nrow <- nrow(data)
-            Sys.sleep(0.001) # just to make timestamp better sortable
+            Sys.sleep(0.001) # just to make timestamp better sortable, requires setNumericRounding(1)
             if(in_nrow == 0L){
                 private$log_list <- c(private$log_list, list(list(meta = meta, timestamp = Sys.time(), code = self$code, event = "load", in_nrow = 0L, unq_nrow = 0L, load_nrow = 0L)))
                 returns(invisible(self))
             }
-            data <- copy(data)[, c(self$cols[length(self$cols)]) := meta]
+            data <- copy(unique(data))[, c(self$cols[length(self$cols)]) := meta]
             unq_nrow <- nrow(data)
             # check if first time used
-            init <- length(self$data)==0L
-            if(!init){
+            if(self$nrow() > 0){
                 # check data types
-                stopifnot(identical(sapply(self$data, class1), sapply(data, class1)))
+                stopifnot(identical(self$types(), sapply(data, class1)))
                 # take only new by PK (including hist col)
                 setkeyv(data, self$keys)
-                data <- data[!self$data]
+                # restatement
+                if(identical(self$rest,FALSE)){
+                    browser() # TODO
+                    # self$data[self$data[, .SD, .SDcols=self$keys[1L]], mult="last"]
+                    data <- data[!self$query(latest=TRUE)]
+                } else {
+                    data <- data[!self$query(latest=TRUE)]
+                }
             }
             self$insert(data)
             private$log_list <- c(private$log_list, list(list(meta = meta, timestamp = Sys.time(), code = self$code, event = "load", in_nrow = in_nrow, unq_nrow = unq_nrow, load_nrow = nrow(data))))
@@ -68,7 +84,7 @@ anchor <- R6Class(
     public = list(
         mne = character(),
         desc = character(),
-        initialize = function(mne, desc, ...){
+        initialize = function(mne, desc){
             self$mne <- mne
             self$desc <- desc
             self$code <- self$mne # AC
@@ -111,8 +127,9 @@ attribute <- R6Class(
         desc = character(),
         knot = character(),
         hist = logical(),
+        rest = logical(),
         anchor = character(),
-        initialize = function(anchor, mne, desc, knot = character(), hist = FALSE, ...){
+        initialize = function(anchor, mne, desc, knot = character(), hist = FALSE, rest = getOption("am.restatability")[hist]){
             stopifnot(all(c("mne","desc") %chin% names(anchor))) # anchor can be self$data anchor's row or named character vector with anchor mne and desc
             self$anchor <- anchor[["mne"]]
             self$mne <- mne
@@ -120,6 +137,7 @@ attribute <- R6Class(
             self$code <- paste_(self$anchor, self$mne) # AC_NAM
             self$knot <- knot
             self$hist <- hist
+            self$rest <- rest
             self$name <- paste_(self$anchor, self$mne, anchor[["desc"]], self$desc) # AC_NAM_Actor_Name
             self$cols <- c(
                 paste_(self$anchor, self$mne, self$anchor, "ID"), # AC_NAM_AC_ID
@@ -161,13 +179,15 @@ tie <- R6Class(
         knot = character(), # "GEN"
         roles = character(), # c("wasHeld","at")
         hist = logical(), # TRUE / FALSE
+        rest = logical(), # TRUE / FALSE / logical()
         identifier = numeric(), # c(1,Inf) / c(Inf,Inf)
-        initialize = function(anchors, knot = character(), roles, identifier = numeric(), hist = FALSE, ...){
+        initialize = function(anchors, knot = character(), roles, identifier = numeric(), hist = FALSE, rest = getOption("am.restatability")[hist]){
             self$anchors <- anchors
             self$knot <- knot
             self$roles <- roles
             self$identifier <- identifier
             self$hist <- hist
+            self$rest <- rest
             self$name <- paste_(c(self$anchors,self$knot), self$roles) # AC_exclusive_AC_with
             self$code <- self$name # AC_exclusive_AC_with
             self$cols <- c(
@@ -209,7 +229,7 @@ knot <- R6Class(
     public = list(
         mne = character(),
         desc = character(),
-        initialize = function(mne, desc, ...){
+        initialize = function(mne, desc){
             self$mne <- mne
             self$desc <- desc
             self$code <- self$mne
