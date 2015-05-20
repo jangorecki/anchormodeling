@@ -5,6 +5,7 @@
 - [x] ETL for loading data
 - [x] mapping and loading redesign
 - [x] parallel ETL
+- [x] metadata logging
 - [ ] restatement
 - [ ] various unit tests
 

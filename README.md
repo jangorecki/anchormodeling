@@ -6,12 +6,15 @@
 - [x] Export model to XML loadable in [Anchor Modeler](roenbaeck.github.io/anchor/).
 - [ ] In-memory AM Data Warehouse instances.
 - [x] Built-in Identity Management to generate surrogate keys.
-- [ ] High performance engine thanks to [data.table](https://github.com/Rdatatable/data.table/wiki).
-- [ ] Parallel ETL.
+- [x] High performance engine thanks to [data.table](https://github.com/Rdatatable/data.table/wiki).
+- [x] Parallel ETL.
+- [x] More docs.
 
 Still prototype.
 
 ## Installation
+
+For configuring fresh linux environment see [Setup Guide](inst/docs/setup.md).
 
 ```r
 library(devtools)
