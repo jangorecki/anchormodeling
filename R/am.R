@@ -126,7 +126,7 @@ AM <- R6Class(
             self$data[self$read(class="attribute")[,.(childs = list(code)),,anchor], childs := i.childs
                       ]
             private$instance_run <- TRUE
-            private$log_list <- c(private$log_list, list(list(event = "AM instance started", obj = NA_character_, timestamp = Sys.time())))
+            private$log_list <- c(private$log_list, list(list(event = "start AM instance", obj = NA_character_, timestamp = Sys.time())))
             invisible(self)
         },
         # ETL
