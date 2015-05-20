@@ -63,7 +63,6 @@ AMobj <- R6Class(
             self$insert(data)
             private$load_log <- c(private$load_log, list(list(meta = meta, last_load = Sys.time(), code = self$code, in_nrow = in_nrow, unq_nrow = unq_nrow, load_nrow = nrow(data),
                                                               load_time = if(requireNamespace("microbenchmark", quietly=TRUE)) (microbenchmark::get_nanotime() - ts) * 1e-9 else proc.time()[[3L]] - ts)))
-            browser()
             invisible(self)
         },
         size = function() object.size(self$data)

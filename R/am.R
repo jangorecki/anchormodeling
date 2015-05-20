@@ -256,10 +256,9 @@ AM <- R6Class(
             }
             invisible(self)
         },
-        save = function(file = format(Sys.time(),"AM_%Y%m%d_%H%M%S.RData")){
+        stop = function(){
             private$instance_run <- FALSE
-            # base::save(self, file) # TO DO
-            stop("TO DO")
+            invisible(self)
         }
     ),
     private = list(
