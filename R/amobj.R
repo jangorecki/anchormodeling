@@ -39,7 +39,7 @@ AMobj <- R6Class(
             in_nrow <- nrow(data)
             Sys.sleep(0.001) # just to make timestamp better sortable, requires setNumericRounding(1)
             if(in_nrow == 0L){
-                private$log_list <- c(private$log_list, list(list(meta = meta, timestamp = Sys.time(), code = self$code, event = "load", in_nrow = 0L, unq_nrow = 0L, load_nrow = 0L,
+                private$load_log <- c(private$load_log, list(list(meta = meta, last_load = Sys.time(), code = self$code, in_nrow = 0L, unq_nrow = 0L, load_nrow = 0L,
                                                                   load_time = if(requireNamespace("microbenchmark", quietly=TRUE)) (microbenchmark::get_nanotime() - ts) * 1e-9 else proc.time()[[3L]] - ts)))
                 returns(invisible(self))
             }
@@ -60,17 +60,19 @@ AMobj <- R6Class(
                     data <- data[!self$query(latest=TRUE)]
                 }
             }
-            private$log_list <- c(private$log_list, list(list(meta = meta, timestamp = Sys.time(), code = self$code, event = "load", in_nrow = in_nrow, unq_nrow = unq_nrow, load_nrow = nrow(data),
+            self$insert(data)
+            private$load_log <- c(private$load_log, list(list(meta = meta, last_load = Sys.time(), code = self$code, in_nrow = in_nrow, unq_nrow = unq_nrow, load_nrow = nrow(data),
                                                               load_time = if(requireNamespace("microbenchmark", quietly=TRUE)) (microbenchmark::get_nanotime() - ts) * 1e-9 else proc.time()[[3L]] - ts)))
+            browser()
             invisible(self)
         },
         size = function() object.size(self$data)
     ),
     private = list(
-        log_list = list()
+        load_log = list()
     ),
     active = list(
-        log = function() rbindlist(private$log_list)
+        log = function() rbindlist(private$load_log)
     )
 )
 
@@ -111,9 +113,6 @@ anchor <- R6Class(
             # anchor close node
             c(lines, "</anchor>")
         }
-    ),
-    active = list(
-        meta = function() list()
     )
 )
 
@@ -131,7 +130,7 @@ attribute <- R6Class(
         hist = logical(),
         rest = logical(),
         anchor = character(),
-        initialize = function(anchor, mne, desc, knot = character(), hist = FALSE, rest = getOption("am.restatability")[hist]){
+        initialize = function(anchor, mne, desc, knot = character(), hist = FALSE, rest = getOption("am.restatability")[hist], hist_col = "ChangedAt"){
             stopifnot(all(c("mne","desc") %chin% names(anchor))) # anchor can be self$data anchor's row or named character vector with anchor mne and desc
             self$anchor <- anchor[["mne"]]
             self$mne <- mne
@@ -144,7 +143,7 @@ attribute <- R6Class(
             self$cols <- c(
                 paste_(self$anchor, self$mne, self$anchor, "ID"), # AC_NAM_AC_ID
                 if(length(self$knot)) paste_(self$anchor, self$mne, self$knot, "ID") else self$name, # AC_GEN_GEN_ID else AC_NAM_Actor_Name
-                if(self$hist) paste_(self$anchor, self$mne, "ChangedAt"), # AC_PLV_ChangedAt
+                if(self$hist) paste_(self$anchor, self$mne, hist_col), # AC_PLV_ChangedAt
                 paste_("Metadata", self$anchor, self$mne) # Metadata_AC_NAM
             )
             self$keys <- if(self$hist) c(self$cols[1L], self$cols[3L]) else self$cols[1L]
@@ -163,9 +162,6 @@ attribute <- R6Class(
         xml = function(){
             paste0('<attribute mnemonic="',self$mne,'" descriptor="',self$desc,'"',if(isTRUE(self$hist)) ' timeRange="datetime"', if(as.logical(length(self$knot))) paste0(' knotRange="',self$knot,'"') else ' dataRange="varchar(42)"','></attribute>') # hardcode for timeRange/dataRange, see: http://stackoverflow.com/q/30054615/2490497
         }
-    ),
-    active = list(
-        meta = function() list()
     )
 )
 
@@ -183,7 +179,7 @@ tie <- R6Class(
         hist = logical(), # TRUE / FALSE
         rest = logical(), # TRUE / FALSE / logical()
         identifier = numeric(), # c(1,Inf) / c(Inf,Inf)
-        initialize = function(anchors, knot = character(), roles, identifier = numeric(), hist = FALSE, rest = getOption("am.restatability")[hist]){
+        initialize = function(anchors, knot = character(), roles, identifier = numeric(), hist = FALSE, rest = getOption("am.restatability")[hist], hist_col = "ChangedAt"){
             self$anchors <- anchors
             self$knot <- knot
             self$roles <- roles
@@ -194,7 +190,7 @@ tie <- R6Class(
             self$code <- self$name # AC_exclusive_AC_with
             self$cols <- c(
                 paste_(c(self$anchors,self$knot), "ID", self$roles, collapse=NULL), # AC_ID_exclusive, AC_ID_with
-                if(self$hist) paste_(self$name, "ChangedAt"), # AC_exclusive_AC_with_ChangedAt
+                if(self$hist) paste_(self$name, hist_col), # AC_exclusive_AC_with_ChangedAt
                 paste_("Metadata", self$name) # Metadata_AC_exclusive_AC_with
             )
             self$keys <- c(self$cols[seq_along(self$anchors)], if(self$hist) self$cols[length(c(self$anchors,self$knot))+1L] else character())
@@ -215,9 +211,6 @@ tie <- R6Class(
             lines <- c(lines, paste0(prefix,'Role role="',self$roles,'" type="',c(self$anchors, self$knot),'" identifier="',tolower(as.character(!is.finite(self$identifier))),'"','/>'))
             c(lines, '</tie>')
         }
-    ),
-    active = list(
-        meta = function() list()
     )
 )
 
@@ -255,8 +248,5 @@ knot <- R6Class(
         xml = function(){
             paste0('<knot mnemonic="',self$mne,'" descriptor="',self$desc,'" identity="int" dataRange="varchar(max)"></knot>') # hardcode, see comment near attribute$xml
         }
-    ),
-    active = list(
-        meta = function() list()
     )
 )

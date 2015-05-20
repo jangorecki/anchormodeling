@@ -18,7 +18,7 @@ AM <- R6Class(
         im = NULL,
         initialize = function(naming = c("anchor" = 2L, "attribute" = 3L, "knot" = 3L), hist_col = "ChangedAt"){
             private$naming <- naming # not yet used
-            private$hist_col <- hist_col # not yet used
+            private$hist_col <- hist_col
             private$log_list <- list(list(event = "initialize AM", obj = NA_character_, timestamp = Sys.time()))
             im <<- IM$new()
             private$log_list <- c(private$log_list, list(list(event = "initialize IM", obj = NA_character_, timestamp = Sys.time())))
@@ -30,12 +30,12 @@ AM <- R6Class(
                                              ][, rows := sapply(obj, function(obj) obj$nrow())
                                                ][, .(name, class, mne, desc, obj, hist, knot, size, rows),, .(code)
                                                  ])
-            lkp_etl_logs <- quote(self$etl[order(timestamp), tail(.SD, 1L),, code])
+            lkp_etl_logs <- quote(self$etl[order(last_load), tail(.SD, 1L),, code])
             if(nrow(self$etl) == 0L){
                 return(exclude.cols(eval(basic_stats), .escape = !pretty))
             }
-            eval(basic_stats)[eval(lkp_etl_logs), `:=`(meta = i.meta, event_timestamp = i.timestamp, event = i.event, in_nrow = i.in_nrow, unq_nrow = i.unq_nrow, load_nrow = i.load_nrow, load_time = i.load_time)
-                              ][order(-event_timestamp)
+            eval(basic_stats)[eval(lkp_etl_logs), `:=`(meta = i.meta, last_load = i.last_load, in_nrow = i.in_nrow, unq_nrow = i.unq_nrow, load_nrow = i.load_nrow, load_time = i.load_time)
+                              ][order(-last_load)
                                 ][, exclude.cols(.SD, .escape = !pretty)
                                   ]
         },
@@ -58,8 +58,8 @@ AM <- R6Class(
             rm(anchor)
             obj = switch(class,
                          "anchor" = anchor$new(...),
-                         "attribute" = attribute$new(..., anchor = self$read(anch)), # lookup for anchor desc using in obj unq name
-                         "tie" = tie$new(...),
+                         "attribute" = attribute$new(..., hist_col = private$hist_col, anchor = self$read(anch)), # lookup for anchor desc using in obj unq name
+                         "tie" = tie$new(..., hist_col = private$hist_col),
                          "knot" = knot$new(...),
                          stop("Anchor model objects must be anchor/attribute/tie/knot."))
             self$data <- rbindlist(list(self$data, data.table(code = obj$code, name = obj$name, class = class, mne = as.character(obj$mne)[1L], desc = as.character(obj$desc)[1L], obj = list(obj), hist = isTRUE(obj$hist), knot = as.character(obj$knot)[1L])))
@@ -231,7 +231,7 @@ AM <- R6Class(
         },
         xml = function(file = format(Sys.time(),"AM_%Y%m%d_%H%M%S.xml")){
             meta_header <- paste0('<schema format="0.98" date="',format(Sys.Date(),"%Y-%m-%d"),'" time="',format(Sys.time(),"%H:%M:%S"),'">')
-            tech_header <- '<metadata changingRange="datetime" encapsulation="dbo" identity="int" metadataPrefix="Metadata" metadataType="int" metadataUsage="true" changingSuffix="ChangedAt" identitySuffix="ID" positIdentity="int" positGenerator="true" positingRange="datetime" positingSuffix="PositedAt" positorRange="tinyint" positorSuffix="Positor" reliabilityRange="tinyint" reliabilitySuffix="Reliability" reliableCutoff="1" deleteReliability="0" reliableSuffix="Reliable" partitioning="false" entityIntegrity="true" restatability="true" idempotency="false" assertiveness="true" naming="improved" positSuffix="Posit" annexSuffix="Annex" chronon="datetime2(7)" now="sysdatetime()" dummySuffix="Dummy" versionSuffix="Version" statementTypeSuffix="StatementType" checksumSuffix="Checksum" businessViews="false" equivalence="false" equivalentSuffix="EQ" equivalentRange="tinyint" databaseTarget="SQLServer" temporalization="uni"/>'
+            tech_header <- paste0('<metadata changingRange="datetime" encapsulation="dbo" identity="int" metadataPrefix="Metadata" metadataType="int" metadataUsage="true" changingSuffix=',private$hist_col,' identitySuffix="ID" positIdentity="int" positGenerator="true" positingRange="datetime" positingSuffix="PositedAt" positorRange="tinyint" positorSuffix="Positor" reliabilityRange="tinyint" reliabilitySuffix="Reliability" reliableCutoff="1" deleteReliability="0" reliableSuffix="Reliable" partitioning="false" entityIntegrity="true" restatability="true" idempotency="false" assertiveness="true" naming="improved" positSuffix="Posit" annexSuffix="Annex" chronon="datetime2(7)" now="sysdatetime()" dummySuffix="Dummy" versionSuffix="Version" statementTypeSuffix="StatementType" checksumSuffix="Checksum" businessViews="false" equivalence="false" equivalentSuffix="EQ" equivalentRange="tinyint" databaseTarget="SQLServer" temporalization="uni"/>')
             footer <- "</schema>"
             lines <- c(meta_header, tech_header)
             lines <- c(lines, self$read(class="knot")[, sapply(obj, function(obj) obj$xml())])
@@ -255,6 +255,11 @@ AM <- R6Class(
                 shiny::runApp(system.file("app","monitor", package = "anchormodeling"))
             }
             invisible(self)
+        },
+        save = function(file = format(Sys.time(),"AM_%Y%m%d_%H%M%S.RData")){
+            private$instance_run <- FALSE
+            # base::save(self, file) # TO DO
+            stop("TO DO")
         }
     ),
     private = list(
