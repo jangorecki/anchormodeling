@@ -9,5 +9,5 @@ Description: Anchor Modeling metadata manager. AM in-memory Data Warehouse insta
 License: GPL-3
 Depends: data.table (>= 1.9.5)
 Imports: R6
-Enhances: parallel
+Enhances: parallel, microbenchmark
 Suggests: testthat, shiny, shinydashboard, DT

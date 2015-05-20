@@ -34,7 +34,7 @@ AM <- R6Class(
             if(nrow(self$etl) == 0L){
                 return(exclude.cols(eval(basic_stats), .escape = !pretty))
             }
-            eval(basic_stats)[eval(lkp_etl_logs), `:=`(meta = i.meta, event_timestamp = i.timestamp, event = i.event, in_nrow = i.in_nrow, unq_nrow = i.unq_nrow, load_nrow = i.load_nrow)
+            eval(basic_stats)[eval(lkp_etl_logs), `:=`(meta = i.meta, event_timestamp = i.timestamp, event = i.event, in_nrow = i.in_nrow, unq_nrow = i.unq_nrow, load_nrow = i.load_nrow, load_time = i.load_time)
                               ][order(-event_timestamp)
                                 ][, exclude.cols(.SD, .escape = !pretty)
                                   ]

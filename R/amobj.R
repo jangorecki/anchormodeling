@@ -35,10 +35,12 @@ AMobj <- R6Class(
         },
         load = function(data, meta){
             stopifnot(is.data.table(data))
+            ts <- if(requireNamespace("microbenchmark", quietly=TRUE)) microbenchmark::get_nanotime() else proc.time()[[3L]]
             in_nrow <- nrow(data)
             Sys.sleep(0.001) # just to make timestamp better sortable, requires setNumericRounding(1)
             if(in_nrow == 0L){
-                private$log_list <- c(private$log_list, list(list(meta = meta, timestamp = Sys.time(), code = self$code, event = "load", in_nrow = 0L, unq_nrow = 0L, load_nrow = 0L)))
+                private$log_list <- c(private$log_list, list(list(meta = meta, timestamp = Sys.time(), code = self$code, event = "load", in_nrow = 0L, unq_nrow = 0L, load_nrow = 0L,
+                                                                  load_time = if(requireNamespace("microbenchmark", quietly=TRUE)) (microbenchmark::get_nanotime() - ts) * 1e-9 else proc.time()[[3L]] - ts)))
                 returns(invisible(self))
             }
             data <- copy(unique(data))[, c(self$cols[length(self$cols)]) := meta]
@@ -58,8 +60,8 @@ AMobj <- R6Class(
                     data <- data[!self$query(latest=TRUE)]
                 }
             }
-            self$insert(data)
-            private$log_list <- c(private$log_list, list(list(meta = meta, timestamp = Sys.time(), code = self$code, event = "load", in_nrow = in_nrow, unq_nrow = unq_nrow, load_nrow = nrow(data))))
+            private$log_list <- c(private$log_list, list(list(meta = meta, timestamp = Sys.time(), code = self$code, event = "load", in_nrow = in_nrow, unq_nrow = unq_nrow, load_nrow = nrow(data),
+                                                              load_time = if(requireNamespace("microbenchmark", quietly=TRUE)) (microbenchmark::get_nanotime() - ts) * 1e-9 else proc.time()[[3L]] - ts)))
             invisible(self)
         },
         size = function() object.size(self$data)
