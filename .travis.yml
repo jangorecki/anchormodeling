@@ -3,7 +3,11 @@ sudo: required
 
 r_packages:
  - R6
+ - microbenchmark
+ - shiny
+ - shinydashboard
  - testthat
 
 r_github_packages:
+ - RStudio/DT
  - Rdatatable/data.table
