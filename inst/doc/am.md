@@ -1,7 +1,7 @@
 
 # Guide presenting full process of Anchor Modeling in R
 
-You should have already installed [anchormodeling](https://github.com/jangorecki/anchormodeling) R package. For configuring fresh linux environment see [Setup Guide](inst/docs/setup.md).  
+You should have already installed [anchormodeling](https://github.com/jangorecki/anchormodeling) R package. For configuring fresh linux environment see [Setup Guide](inst/doc/setup.md).  
 
 ## Define domain
 

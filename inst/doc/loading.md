@@ -5,7 +5,7 @@
   - [ ] two flat data
   - [ ] multiple flat data
 - [x] ETL template:
-  - [x] isolate IM - loading anchors
+  - [x] isolate IM - loading anchors/knots ID only
     - [x] lookup anchor PK from local IM table to incoming data
     - [x] generate new PK for new rows
     - [x] write new rows to IM
@@ -41,3 +41,5 @@
   - [x] AMobj$insert
     - [x] rbindlist
     - [x] resetkey
+- [ ] rollback based on metadata ID delete from all
+- [ ] create indexes after insert
