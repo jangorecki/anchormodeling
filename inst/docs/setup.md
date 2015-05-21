@@ -25,8 +25,8 @@ Install R packages.
 ```r
 install.packages(c("devtools","shinydashboard","microbenchmark"), repos="http://cran.stat.ucla.edu")
 library(devtools)
-install_github("Rdatatable/data.table")
 install_github("RStudio/DT")
+install_github("Rdatatable/data.table")
 install_github("jangorecki/anchormodeling")
 ```
 
