@@ -1,0 +1,154 @@
+
+# Guide presenting full process of Anchor Modeling in R
+
+You should have already installed [anchormodeling](https://github.com/jangorecki/anchormodeling) R package. For configuring fresh linux environment see [Setup Guide](inst/docs/setup.md).  
+
+## Define domain
+
+Package already has working built-in example model for *Stage performances* domain. Use function `actor.am` to populate various iterations of the model. Use `actor.data` to populate example source data.  
+
+In the document I will define basic model for git repository data.  
+You can use git's *traveling in time* ability to easily produce data which evolves over time.  
+
+## Define Anchor Model
+
+```r
+library(anchormodeling)
+
+am <- AM$new()
+am$add$A(mne = "AU", desc = "Author")
+am$add$a(mne = "NAM", desc = "Name", anchor = "AU")
+am$add$a(mne = "EMA", desc = "Email", anchor = "AU")
+am$add$A(mne = "BR", desc = "Branch")
+am$add$A(mne = "CM", desc = "Commit")
+am$add$a(mne = "TAG", desc = "Tag", anchor = "CM")
+am$add$a(mne = "HSH", desc = "Hash", anchor = "CM")
+```
+
+## Run AM Data Warehouse instance
+
+```r
+am$run()
+```
+
+## Extract data from git
+
+In the working directory of the R session create subdir and clone your git repo inside it.  
+I will use [data.table](https://github.com/Rdatatable/data.table) package repo as it is core dependency.  
+
+```sh
+mkdir src
+cd src
+git clone https://github.com/Rdatatable/data.table
+cd data.table
+git reset --soft fcb3ebbc6f6974b9b5e97e3d5b8b168a346d35c5
+```
+
+TO DO confirm soft
+
+We are now on the data.table 1.1 version. Lets extract some data for few points in time
+
+```sh
+git log
+```
+
+So source data *csv* files are ready to be picked up by any ETL tools.
+
+## Load data to DW
+
+You need to define mapping.  
+Each symbol nested in below list substitutes the character scalar provided by user while defining mapping.  
+
+```r
+mapping <- list(anchor1_mne = list(natural_key_column_names,
+                                   attr1_mne = column_name,
+                                   attr2_mne = c(column_name, "hist" = historize_column_name),
+                                   attr3_mne = c(column_name, "knot" = knot_mne),
+                                   attr3_mne = c(column_name, "hist" = historize_column_name, "knot" = knot_mne)),
+                anchor2_mne = list(natural_key_column_names,
+                                   attr1_mne = column_name,
+                                   attr2_mne = c(column_name, "hist" = historize_column_name),
+                                   attr3_mne = c(column_name, "knot" = knot_mne),
+                                   attr3_mne = c(column_name, "hist" = historize_column_name, "knot" = knot_mne)))
+```
+
+`meta` argument is used as batch indicator and will have metadata assigned to each row in the model.  
+
+```r
+commits <- fread()
+am$load(mapping, commits, meta = 1L)
+```
+
+Incremental loading.
+
+```r
+meta <- 2L # incrementing batch
+filenames <- list.files()
+for(filename in filenames){
+    Sys.sleep(2.5)
+    commits <- fread(filename)
+    am$load(mapping, commits, meta = meta)
+    meta <- meta + 1L
+}
+```
+
+We loaded the first file twice. This is not a big deal for Anchor Model DW.  
+If we would use *restatement* feature by `options("am.restatability" = FALSE)` globally on all historized entities or locally while adding them model by `rest` argument, then we can totally ignore such case.  
+
+## Query data
+
+3NF are not yet ready.  
+
+```r
+# am$view() # TO DO
+```
+
+## Query metadata
+
+Check all the below commands.
+
+```r
+am
+am$etl
+am$log
+am$IM()
+```
+
+## Save AM instance
+
+```r
+am$stop()
+save(am, file = format(Sys.time(),"AM_%Y%m%d_%H%M%S.RData"))
+```
+
+Loading anchor model from the *RData* was not tested yet.
+
+## Export model
+
+```r
+am$xml()
+```
+
+Exported xml does not contain restatability definition.  
+
+## Importants notes vs SQL anchor model
+
+- data stored in-memory
+- built-in ETL
+- triggers are replaced by functions
+- does not support *concurrent-reliance-temporal*
+- built-in Identity Management
+- built-in dashboard
+- high performance data processing using [data.table](https://github.com/Rdatatable/data.table) and *parallel* packages
+- easy multiple AM instances in R session
+
+## Project road map
+
+Writing it here as the Pull Requests are very welcome.  
+
+- [ ] import anchor model from xml
+- [ ] optional postgres db for data storage
+- [ ] lot of unit tests
+- [ ] idempotency
+- [ ] better shiny dashboard
+- [ ] concurrent-reliance-temporal
