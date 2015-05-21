@@ -6,7 +6,7 @@
 - [x] mapping and loading redesign
 - [x] parallel ETL
 - [x] metadata logging
-- [ ] restatement
+- [x] restatement
 - [ ] various unit tests
 
 

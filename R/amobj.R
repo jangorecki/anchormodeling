@@ -45,19 +45,21 @@ AMobj <- R6Class(
             }
             data <- copy(unique(data))[, c(self$cols[length(self$cols)]) := meta]
             unq_nrow <- nrow(data)
+            setkeyv(data, self$keys)
             # check if first time used
             if(self$nrow() > 0){
                 # check data types
                 stopifnot(identical(self$types(), sapply(data, class1)))
-                # take only new by PK (including hist col)
-                setkeyv(data, self$keys)
+                # filter out exactly same rows by ID and hist
+                data <- data[!self$query()]
                 # restatement
                 if(identical(self$rest,FALSE)){
-                    browser() # TODO
-                    # self$data[self$data[, .SD, .SDcols=self$keys[1L]], mult="last"]
-                    data <- data[!self$query(latest=TRUE)]
-                } else {
-                    data <- data[!self$query(latest=TRUE)]
+                    # get new vs previous row
+                    new_vs_prev <- quote(self$query()[data, which(!ST_NAM_Stage_Name == i.ST_NAM_Stage_Name | is.na(ST_NAM_Stage_Name)), roll = Inf])
+                    # get new vs  next row
+                    new_vs_next <- quote(self$query()[data, which(!ST_NAM_Stage_Name == i.ST_NAM_Stage_Name | is.na(ST_NAM_Stage_Name)), roll = -Inf])
+                    # subset
+                    data <- data[intersect(eval(new_vs_prev), eval(new_vs_next))]
                 }
             }
             self$insert(data)

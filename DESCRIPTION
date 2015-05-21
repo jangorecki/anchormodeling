@@ -2,7 +2,7 @@ Package: anchormodeling
 Type: Package
 Title: Anchor Modeling
 Version: 0.3
-Date: 2015-05-20
+Date: 2015-05-21
 Author: Jan Gorecki
 Maintainer: Jan Gorecki <j.gorecki@wit.edu.pl>
 Description: Anchor Modeling metadata manager. AM in-memory Data Warehouse instances. Identity Management instaces. Automated parallel ETL for AM loading.
