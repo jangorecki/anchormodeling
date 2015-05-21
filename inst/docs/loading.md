@@ -32,11 +32,11 @@
     - [x] child classes related validation
     - [x] call $load.AMobj just with a subset of cols
     - [x] rename *src cols* to *tbl cols*
-  - [ ] AMobj$load
+  - [x] AMobj$load
     - [x] validate nrow
     - [x] data types validation - except first load
     - [x] add metadata id
-    - [ ] restatement
+    - [x] restatement
     - [x] append log
   - [x] AMobj$insert
     - [x] rbindlist
