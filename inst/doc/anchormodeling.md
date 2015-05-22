@@ -139,7 +139,7 @@ Exported xml does not contain restatability definition.
 - does not support *concurrent-reliance-temporal*
 - built-in Identity Management
 - built-in dashboard
-- high performance data processing using [data.table](https://github.com/Rdatatable/data.table) and *parallel* packages
+- high performance data processing using [data.table](https://github.com/Rdatatable/data.table)
 - easy multiple AM instances in R session
 
 ## Project road map
@@ -152,3 +152,4 @@ Writing it here as the Pull Requests are very welcome.
 - [ ] idempotency
 - [ ] better shiny dashboard
 - [ ] concurrent-reliance-temporal
+- [ ] parallel processing

@@ -188,7 +188,7 @@ AM <- R6Class(
             # first pass loop, only check if mapping matches, fill defaults, etc.
             # ?
             # loading knots
-            if.mclapply(load_seq["knot", code, nomatch=0L], function(knot_code){
+            lapply(load_seq["knot", code, nomatch=0L], function(knot_code){
                 src_cols <- load_seq[c("attribute","tie"), nomatch=0L][knot==knot_code, src_cols]
                 src_cols <- c(paste_(knot_code,"ID"), src_cols)
                 cols <- self$read(knot_code)$obj[[1L]]$cols
@@ -201,7 +201,7 @@ AM <- R6Class(
                 )
             })
             # loading anchors
-            if.mclapply(load_seq["anchor", code, nomatch=0L], function(anchor_code){
+            lapply(load_seq["anchor", code, nomatch=0L], function(anchor_code){
                 src_cols <- load_seq[code==anchor_code, src_col]
                 cols <- self$read(anchor_code)$obj[[1L]]$cols
                 cols <- cols[-length(cols)] # exclude metadata col
@@ -211,7 +211,7 @@ AM <- R6Class(
                     meta = meta
                 )
                 # loading child attributes
-                if.mclapply(load_seq[CJ("attribute", anchor_code), code, nomatch=0L], function(attr_code){
+                lapply(load_seq[CJ("attribute", anchor_code), code, nomatch=0L], function(attr_code){
                     src_cols <- load_seq[code==attr_code, c(if(is.na(knot)) src_col else paste_(knot,"ID"), if(hist) hist_col else character())]
                     src_cols <- c(paste_(anchor_code,"ID"), src_cols)
                     cols <- self$read(attr_code)$obj[[1L]]$cols

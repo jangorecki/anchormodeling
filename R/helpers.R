@@ -46,15 +46,3 @@ valid_entity_params <- function(x, data.names){
 selfNames <- function(x) setNames(x, x)
 
 exclude.cols <- function(x, cols = c("obj"), .escape=FALSE) if(.escape) return(x) else x[, .SD, .SDcols = names(x)[!names(x) %chin% eval(cols)]]
-
-if.mclapply <- function(..., parallel = getOption("am.parallel")){
-    if(is.null(parallel) || parallel==FALSE || !requireNamespace("parallel", quietly = TRUE)){
-        return(invisible(lapply(...)))
-    } else if(isTRUE(parallel)){
-        if(requireNamespace("parallel", quietly = TRUE)){
-            return(invisible(parallel::mclapply(...)))
-        } else {
-            stop("am.parallel is set to TRUE for parallel processing but no 'parallel' package installed.")
-        }
-    } else stop("invalid parallel argument, am.parallel option should be logical")
-}

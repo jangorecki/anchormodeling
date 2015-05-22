@@ -3,8 +3,11 @@
 - [x] auto surrogate key for anchors and knots
 - [x] nest IM in AM to manage identities
 - [x] ETL for loading data
+  - [x] anchors
+  - [x] attributes
+  - [x] knots
+  - [ ] ties
 - [x] mapping and loading redesign
-- [x] parallel ETL
 - [x] metadata logging
 - [x] restatement
 - [ ] various unit tests

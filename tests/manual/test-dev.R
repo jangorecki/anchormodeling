@@ -9,7 +9,6 @@ load_all()
 options("am.restatability"=FALSE)
 am <- actor.am(3)
 am$run()
-options("am.parallel"=FALSE)
 
 # status checks -----------------------------------------------------------
 

@@ -25,8 +25,8 @@
       - [x] exists in incoming data
       - [x] exists in currently using mapping
     - [x] prepare sequence of loading
-      - [x] knots - parallel
-      - [x] anchors - parallel
+      - [x] knots
+      - [x] anchors
         - [x] attributes
       - [ ] ties
     - [x] child classes related validation
