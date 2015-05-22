@@ -9,7 +9,7 @@ Below guide is designed for Ubuntu. It will likely work on similar distributions
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
 sudo add-apt-repository 'deb  http://cran.stat.ucla.edu/bin/linux/ubuntu trusty/'
 sudo apt-get update
-sudo apt-get -y install r-base-dev libcurl4-gnutls-dev
+sudo apt-get -y install r-base-dev libcurl4-gnutls-dev libxml2-dev libssl-dev
 ```
 
 ## Install R packages
@@ -23,7 +23,8 @@ R
 Install R packages.
 
 ```r
-install.packages(c("devtools","shinydashboard","microbenchmark"), repos="http://cran.stat.ucla.edu")
+install.packages(c("R6","devtools","shinydashboard","microbenchmark"), repos="http://cran.stat.ucla.edu")
+# if asked accept installing to personal library
 library(devtools)
 install_github("RStudio/DT")
 install_github("Rdatatable/data.table")
@@ -44,4 +45,4 @@ RStudio is undoubtedly best IDE for R.
 
 ## Anchor Modeling in R
 
-There is a separate document which will go through the full process of anchor modeling in R.
+There is a [separate document](inst/doc/anchormodeling.md) which will go through the full process of anchor modeling in R.

@@ -12,7 +12,7 @@
     - [x] include just im$use()
   - [x] isolate single anchor loading: model processing of single anchor load as atomic operation
     - [x] as easy as lapply
-    - [x] make it parallel
+    - [ ] make it parallel
 - [ ] loading process
   - [ ] two pass: detailed validation in first loop
   - [ ] AM$load

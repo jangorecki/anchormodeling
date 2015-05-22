@@ -7,7 +7,7 @@
 - [x] In-memory AM Data Warehouse instances.
 - [x] Built-in Identity Management to generate surrogate keys.
 - [x] High performance engine thanks to [data.table](https://github.com/Rdatatable/data.table/wiki).
-- [x] Parallel processing.
+- [ ] Parallel processing.
 
 ## Installation
 
@@ -17,6 +17,10 @@ For configuring fresh linux environment see [Setup Guide](inst/doc/setup.md).
 library(devtools)
 install_github("jangorecki/anchormodeling")
 ```
+
+## How to use
+
+See [introduction doc](inst/doc/anchormodeling.md) which will go through all features of anchor modeling in R.
 
 ## License
 
