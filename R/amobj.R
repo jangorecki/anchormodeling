@@ -39,11 +39,11 @@ AMobj <- R6Class(
             in_nrow <- nrow(data)
             Sys.sleep(0.001) # just to make timestamp better sortable, requires setNumericRounding(1)
             if(in_nrow == 0L){
-                private$load_log <- c(private$load_log, list(list(meta = meta, last_load = Sys.time(), code = self$code, in_nrow = 0L, unq_nrow = 0L, load_nrow = 0L,
+                private$load_log <- c(private$load_log, list(list(meta = meta[["meta"]], user = meta[["user"]], src = meta[["src"]], timestamp = Sys.time(), code = self$code, in_nrow = 0L, unq_nrow = 0L, load_nrow = 0L,
                                                                   load_time = if(requireNamespace("microbenchmark", quietly=TRUE)) (microbenchmark::get_nanotime() - ts) * 1e-9 else proc.time()[[3L]] - ts)))
                 returns(invisible(self))
             }
-            data <- copy(unique(data))[, c(self$cols[length(self$cols)]) := meta]
+            data <- copy(unique(data))[, c(self$cols[length(self$cols)]) := meta[["meta"]]]
             unq_nrow <- nrow(data)
             setkeyv(data, self$keys)
             # check if first time used
@@ -63,7 +63,7 @@ AMobj <- R6Class(
                 }
             }
             self$insert(data)
-            private$load_log <- c(private$load_log, list(list(meta = meta, last_load = Sys.time(), code = self$code, in_nrow = in_nrow, unq_nrow = unq_nrow, load_nrow = nrow(data),
+            private$load_log <- c(private$load_log, list(list(meta = meta[["meta"]], src = meta[["src"]], user = meta[["user"]], timestamp = Sys.time(), code = self$code, in_nrow = in_nrow, unq_nrow = unq_nrow, load_nrow = nrow(data),
                                                               load_time = if(requireNamespace("microbenchmark", quietly=TRUE)) (microbenchmark::get_nanotime() - ts) * 1e-9 else proc.time()[[3L]] - ts)))
             invisible(self)
         },

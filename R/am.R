@@ -30,11 +30,11 @@ AM <- R6Class(
                                              ][, rows := sapply(obj, function(obj) obj$nrow())
                                                ][, .(name, class, mne, desc, obj, hist, knot, size, rows),, .(code)
                                                  ])
-            lkp_etl_logs <- quote(self$etl[order(last_load), tail(.SD, 1L),, code])
+            lkp_etl_logs <- quote(self$etl[order(timestamp), tail(.SD, 1L),, code])
             if(nrow(self$etl) == 0L){
                 return(exclude.cols(eval(basic_stats), .escape = !pretty))
             }
-            eval(basic_stats)[eval(lkp_etl_logs), `:=`(meta = i.meta, last_load = i.last_load, in_nrow = i.in_nrow, unq_nrow = i.unq_nrow, load_nrow = i.load_nrow, load_time = i.load_time)
+            eval(basic_stats)[eval(lkp_etl_logs), `:=`(meta = i.meta, last_load = i.timestamp, in_nrow = i.in_nrow, unq_nrow = i.unq_nrow, load_nrow = i.load_nrow, load_time = i.load_time)
                               ][order(-last_load)
                                 ][, exclude.cols(.SD, .escape = !pretty)
                                   ]
@@ -132,6 +132,7 @@ AM <- R6Class(
         # ETL
         load = function(mapping, data, meta = NA_integer_, use.im=TRUE){
             if(!isTRUE(private$instance_run)) stop("Run DW instance by am$run()")
+            data.sub <- substitute(data)
             stopifnot(
                 is.list(mapping),
                 length(mapping)>0L,
@@ -143,7 +144,7 @@ AM <- R6Class(
                 stop(paste0("In the mapping definition names should be mne of anchors, related to: ", paste(names(mapping)[names(mapping) %chin% self$read(class = c("anchor"))], collapse=", ")))
             } # nodes in mapping only anchors, handle: add tie, attributes nested, knots autoloaded, maybe tie autoloading too?
             if(!all(sapply(mapping, function(x, data.names) sapply(x, valid_entity_params, data.names), data.names = names(data)))){
-               stop(paste0("Invalid entity params provided, it should already be catched. A debug on `valid_entity_params`"))
+               stop(paste0("Invalid entity params provided"))
             } # src columns "" / NULL exists in data to load # apply over elements in the mapping and then over names of each attribute definition
             model_all_attr_codes_for_anchors <- setNames(self$read(names(mapping))$childs, names(mapping))
             # key by hist and knot only for batch attributes match to model, by defined hist, knot, mne, anchor
@@ -185,8 +186,14 @@ AM <- R6Class(
                     mapping_attrs_dt[, .(anchor, class = "attribute", mne, code, hist, knot, src_col = src_col, hist_col = hist_col)]
                 )), c("class","anchor"))
             set2keyv(load_seq, "code")
-            # first pass loop, only check if mapping matches, fill defaults, etc.
-            # ?
+            # first pass loop, only check if mapping matches, fill defaults, etc. ?
+            if(is.integer(meta) || is.numeric(meta)) meta <- list(meta = meta, user = as.character(Sys.info()[["user"]])[1L], src = paste(deparse(data.sub), collapse="\n")[1L])
+            else if(is.data.table(meta) || is.list(meta)){
+                if(!"meta" %chin% names(meta)) meta[["meta"]] <- NA_integer_
+                if(!"user" %chin% names(meta)) meta[["user"]] <- as.character(Sys.info()[["user"]])[1L]
+                if(!"src" %chin% names(meta)) meta[["src"]] <- paste(deparse(data.sub), collapse="\n")[1L]
+                stopifnot(all(c("meta","user","src") %chin% names(meta)))
+            }
             # loading knots
             lapply(load_seq["knot", code, nomatch=0L], function(knot_code){
                 src_cols <- load_seq[c("attribute","tie"), nomatch=0L][knot==knot_code, src_cols]
@@ -279,7 +286,7 @@ AM <- R6Class(
                  "t" = function(...) self$create(class = "tie", ...),
                  "knot" = function(...) self$create(class = "knot", ...),
                  "k" = function(...) self$create(class = "knot", ...))
-        }
+        } # wrapper for faster adding AM objects: am$add$A(mne = "AC", desc = "Actor")
     )
 )
 
