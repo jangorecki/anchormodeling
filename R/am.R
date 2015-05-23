@@ -17,7 +17,7 @@ AM <- R6Class(
         data = data.table(NULL),
         im = NULL,
         initialize = function(naming = c("anchor" = 2L, "attribute" = 3L, "knot" = 3L), hist_col = "ChangedAt"){
-            private$naming <- naming # not yet used
+            private$naming <- naming
             private$hist_col <- hist_col
             private$log_list <- list(list(event = "initialize AM", obj = NA_character_, timestamp = Sys.time()))
             im <<- IM$new()
@@ -98,20 +98,19 @@ AM <- R6Class(
             if(nrow(self$data)==0L) stop("Anchor Model objects not defined.")
             setkeyv(self$data, "code")[]
             set2keyv(self$data, "class")[]
-            all(
-                # code unique
-                self$data[, length(code) == uniqueN(code)],
-                # name unique
-                self$data[, length(name) == uniqueN(name)],
-                # each attribute is linked to existing anchor
-                all(self$data[class=="attribute", unique(unlist(lapply(obj, function(obj) obj[["anchor"]])))] %chin% self$data[class=="anchor", mne]),
-                # each tie linked to existing anchors
-                all(self$data[class=="tie", unique(unlist(lapply(obj, function(obj) obj[["anchors"]])))] %chin% self$data[class=="anchor", mne]),
-                # each knotted attribute linked to existing knot
-                all(self$data[class=="attribute", unique(unlist(lapply(obj, function(obj) obj[["knot"]])))] %chin% self$data[class=="knot", mne]),
-                # each knotted tie linked to existing knot
-                all(self$data[class=="tie", unique(unlist(lapply(obj, function(obj) obj[["knot"]])))] %chin% self$data[class=="knot", mne])
-            )
+            if(!self$data[, length(code) == uniqueN(code)]) stop("Codes are not unique.")
+            if(!self$data[, length(name) == uniqueN(name)]) stop("Names are not unique.")
+            if(!all(self$data[class=="attribute", unique(unlist(lapply(obj, function(obj) obj[["anchor"]])))] %chin% self$data[class=="anchor", mne])) stop("Each attribute must be linked to existing anchor.")
+            if(!all(self$data[class=="tie", unique(unlist(lapply(obj, function(obj) obj[["anchors"]])))] %chin% self$data[class=="anchor", mne])) stop("Each tie must be linked to existing anchors.")
+            if(!all(self$data[class=="attribute", unique(unlist(lapply(obj, function(obj) obj[["knot"]])))] %chin% self$data[class=="knot", mne])) stop("Each knotted attribute must be linked to existing knot.")
+            if(!all(self$data[class=="tie", unique(unlist(lapply(obj, function(obj) obj[["knot"]])))] %chin% self$data[class=="knot", mne])) stop("Each knotted tie must be linked to existing knot")
+            if(self$data[class=="anchor", .N] > 1L){ # exclude single 1 anchors from validation
+                if(!all(self$data[class=="anchor", mne] %chin% self$data[class=="tie", unique(unlist(lapply(obj, function(obj) obj[["anchors"]])))])) stop("All anchors must be linked with ties.")
+            }
+            if(!all(self$data[class=="tie", unique(unlist(lapply(obj, function(obj) obj[["anchors"]])))] %chin% self$data[class=="anchor", mne])) stop("All anchors defined for ties must exists in model.")
+            if(!all(self$data[class=="knot", mne] %chin% self$data[class %chin% c("attribute","tie"), unique(na.omit(knot))])) stop("All knots must be connected to tie or attribute.")
+            invisible(self$data[class!="tie", .(mne, valid = private$naming[class]==nchar(mne)), class][, if(any(!valid)) stop(paste0("Following entities brakes declared naming convention: ", paste(mne[!valid], collapse=", ")))])
+            TRUE
         },
         run = function(){
             if(!self$validate()) stop("AM definition is invalid, see am$validate body for conditions")
@@ -241,11 +240,12 @@ AM <- R6Class(
             stop("not yet ready, use am$read()")
         },
         xml = function(file = format(Sys.time(),"AM_%Y%m%d_%H%M%S.xml")){
+            if(!self$validate()) stop("AM definition is invalid, see am$validate body for conditions")
             meta_header <- paste0('<schema format="0.98" date="',format(Sys.Date(),"%Y-%m-%d"),'" time="',format(Sys.time(),"%H:%M:%S"),'">')
             tech_header <- paste0('<metadata changingRange="datetime" encapsulation="dbo" identity="int" metadataPrefix="Metadata" metadataType="int" metadataUsage="true" changingSuffix=',private$hist_col,' identitySuffix="ID" positIdentity="int" positGenerator="true" positingRange="datetime" positingSuffix="PositedAt" positorRange="tinyint" positorSuffix="Positor" reliabilityRange="tinyint" reliabilitySuffix="Reliability" reliableCutoff="1" deleteReliability="0" reliableSuffix="Reliable" partitioning="false" entityIntegrity="true" restatability="true" idempotency="false" assertiveness="true" naming="improved" positSuffix="Posit" annexSuffix="Annex" chronon="datetime2(7)" now="sysdatetime()" dummySuffix="Dummy" versionSuffix="Version" statementTypeSuffix="StatementType" checksumSuffix="Checksum" businessViews="false" equivalence="false" equivalentSuffix="EQ" equivalentRange="tinyint" databaseTarget="SQLServer" temporalization="uni"/>')
             footer <- "</schema>"
             lines <- c(meta_header, tech_header)
-            lines <- c(lines, self$read(class="knot")[, sapply(obj, function(obj) obj$xml())])
+            lines <- c(lines, if(nrow(self$read(class="knot")) > 0L) self$read(class="knot")[, sapply(obj, function(obj) obj$xml())])
             matched_attr <- quote(self$read(class="attribute")[sapply(obj, function(obj) obj[["anchor"]])==anchor_code])
             for(anchor_code in self$read(class="anchor")$code){ # for each anchor nest attributes
                 if(nrow(eval(matched_attr)) > 0) lines <- c(lines, self$read(code = anchor_code)[, sapply(obj, function(obj) obj$xml(attributes = eval(matched_attr)))]) # batch lookup to all anchors attributes
