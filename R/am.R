@@ -143,7 +143,10 @@ AM <- R6Class(
             if(!all(names(mapping) %chin% self$read(class = c("anchor"))$mne)){
                 stop(paste0("In the mapping definition names should be mne of anchors, related to: ", paste(names(mapping)[names(mapping) %chin% self$read(class = c("anchor"))], collapse=", ")))
             } # nodes in mapping only anchors, handle: add tie, attributes nested, knots autoloaded, maybe tie autoloading too?
-            if(!all(sapply(mapping, function(x, data.names) sapply(x, valid_entity_params, data.names), data.names = names(data)))){
+            if(!all(unlist(mapping) %chin% names(data))){
+                stop(paste0("Following defined columns do not exists in source data: ",paste(unlist(mapping)[!unlist(mapping) %chin% names(data)],collapse=", ")))
+            } # all leafs of mapping should be src col names and exists in data
+            if(!all(sapply(mapping, function(x, data.names) all(sapply(x, valid_entity_params, data.names)), data.names = names(data)))){
                stop(paste0("Invalid entity params provided"))
             } # src columns "" / NULL exists in data to load # apply over elements in the mapping and then over names of each attribute definition
             model_all_attr_codes_for_anchors <- setNames(self$read(names(mapping))$childs, names(mapping))
@@ -173,7 +176,7 @@ AM <- R6Class(
             # first pass loop checks on composite key join
             mapping_attrs_dt[ eval(model_attrs_lkp), `:=`(code = i.code)]
             if(any(is.na(mapping_attrs_dt$code))){
-                stop(paste0("Some of the provided attributes have incorrect definition versus model: ", paste(mapping_attrs_dt[is.na(code), paste(anchor, mne, sep="_")], collapse=", ")))
+                stop(paste0("Some of the provided attributes have incorrect definition versus model: ", paste(mapping_attrs_dt[is.na(code), paste(anchor, mne, sep="_")], collapse=", "),". Check if they are not missing `hist` when defined."))
             } # all provided attributes in the mapping exists in model for those anchors, with expected hist and knot
             if(use.im){
                 data <- im$use(data, mne = mapping_attrs_dt[, unique(na.omit(c(anchor, knot)))], nk = lapply(mapping, `[[`, 1L), in.place = FALSE)
@@ -187,13 +190,14 @@ AM <- R6Class(
                 )), c("class","anchor"))
             set2keyv(load_seq, "code")
             # first pass loop, only check if mapping matches, fill defaults, etc. ?
-            if(is.integer(meta) || is.numeric(meta)) meta <- list(meta = meta, user = as.character(Sys.info()[["user"]])[1L], src = paste(deparse(data.sub), collapse="\n")[1L])
-            else if(is.data.table(meta) || is.list(meta)){
+            if(is.integer(meta) || is.numeric(meta)){
+                meta <- list(meta = meta, user = as.character(Sys.info()[["user"]])[1L], src = paste(deparse(data.sub), collapse="\n")[1L])
+            } else if(is.data.table(meta) || is.list(meta)){
                 if(!"meta" %chin% names(meta)) meta[["meta"]] <- NA_integer_
                 if(!"user" %chin% names(meta)) meta[["user"]] <- as.character(Sys.info()[["user"]])[1L]
                 if(!"src" %chin% names(meta)) meta[["src"]] <- paste(deparse(data.sub), collapse="\n")[1L]
                 stopifnot(all(c("meta","user","src") %chin% names(meta)))
-            }
+            } else stop ("Invalid meta argument")
             # loading knots
             lapply(load_seq["knot", code, nomatch=0L], function(knot_code){
                 src_cols <- load_seq[c("attribute","tie"), nomatch=0L][knot==knot_code, src_cols]

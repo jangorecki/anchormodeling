@@ -39,7 +39,7 @@ valid_entity_params <- function(x, data.names){
     if(is.null(names(x)) && length(x)==1L) return(TRUE)
     #else if(is.null(names(x)) && length(x)>1L) browser()#stop("Provide named character vector of entity definition, use `knot`, `hist`") # commented because blocks composite nk
     else if(!all(x[names(x) %chin% c("","hist")] %chin% data.names)) stop(paste0("All unnamed elements of the mapping list must be existing column names of data. Fix mapping definition for src fields: ", paste(x[!x[names(x) %chin% c("","hist")] %chin% data.names], collapse=",")))
-    else if(!all(names(x) %chin% c("","hist","knot"))) stop(paste0('Mapping of entity must be character vector named in: "", hist, knot.'))
+    else if(!all(names(x) %chin% c("","hist"))) stop(paste0('Mapping of entity must be character vector named in: "", hist, knot.'))
     TRUE
 }
 
