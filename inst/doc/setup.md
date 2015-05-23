@@ -9,8 +9,10 @@ Below guide is designed for Ubuntu. It will likely work on similar distributions
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
 sudo add-apt-repository 'deb  http://cran.stat.ucla.edu/bin/linux/ubuntu trusty/'
 sudo apt-get update
-sudo apt-get -y install r-base-dev libcurl4-gnutls-dev libxml2-dev libssl-dev
+sudo apt-get -y install r-base-dev libcurl4-gnutls-dev libxml2-dev libssl-dev git
 ```
+
+Git is optional, but suggested if you want to follow *Guide to Anchor Modeling in R* or use it against your own repo.  
 
 ## Install R packages
 
