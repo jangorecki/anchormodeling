@@ -10,7 +10,7 @@ paste_ <- function(..., sep="_", collapse="_") paste(..., sep=sep, collapse=coll
 
 am.size.format <-  function(x, units = "auto"){
     # modified: utils:::format.object_size
-    if(is.null(units)) return(sapply(x, function(x) format(x, units="auto")))
+    if(is.null(units)) return(sapply(x, function(x) format.object_size(x, units="auto")))
     x <- unlist(x)
     units <- match.arg(units, c("b", "auto", "Kb", "Mb", "Gb", "B", "KB", "MB", "GB"))
     if (units == "auto") {
@@ -37,7 +37,7 @@ valid_entity_params <- function(x, data.names){
     # AC = list("name",
     #           NAM = c("name", hist="name_date"))
     if(is.null(names(x)) && length(x)==1L) return(TRUE)
-    else if(is.null(names(x)) && length(x)>1L) stop("Provide named character vector of entity definition, use `knot`, `hist`")
+    #else if(is.null(names(x)) && length(x)>1L) browser()#stop("Provide named character vector of entity definition, use `knot`, `hist`") # commented because blocks composite nk
     else if(!all(x[names(x) %chin% c("","hist")] %chin% data.names)) stop(paste0("All unnamed elements of the mapping list must be existing column names of data. Fix mapping definition for src fields: ", paste(x[!x[names(x) %chin% c("","hist")] %chin% data.names], collapse=",")))
     else if(!all(names(x) %chin% c("","hist","knot"))) stop(paste0('Mapping of entity must be character vector named in: "", hist, knot.'))
     TRUE
@@ -46,3 +46,23 @@ valid_entity_params <- function(x, data.names){
 selfNames <- function(x) setNames(x, x)
 
 exclude.cols <- function(x, cols = c("obj"), .escape=FALSE) if(.escape) return(x) else x[, .SD, .SDcols = names(x)[!names(x) %chin% eval(cols)]]
+
+format.object_size <- function (x, units = "b", ...) {
+    # makes valid units on output: bytes instead of bits, declared locally for case when units=NULL and redirects to utils:::format.object_size
+    units <- match.arg(units, c("b", "auto", "Kb", "Mb", "Gb",
+                                "B", "KB", "MB", "GB"))
+    if (units == "auto") {
+        if (x >= 1024^3)
+            units <- "GB"
+        else if (x >= 1024^2)
+            units <- "MB"
+        else if (x >= 1024)
+            units <- "KB"
+        else units <- "B"
+    }
+    switch(units,
+           b = , B = paste(x, "bytes"),
+           Kb = , KB = paste(round(x/1024, 1L), "KB"),
+           Mb = , MB = paste(round(x/1024^2, 1L), "MB"),
+           Gb = , GB = paste(round(x/1024^3, 1L), "GB"))
+}
