@@ -43,6 +43,9 @@ Source data *json* files are ready to be picked up.
 Can be easiy loaded using [jsonlite](https://github.com/jeroenooms/jsonlite).  
 
 ```{r extract_commits}
+#library(devtools)
+#load_all("anchormodeling")
+library(anchormodeling)
 library(jsonlite)
 extract.commits <- function(x){
     char_cols <- c("commit","author","author_email","message") # handle encoding
@@ -54,10 +57,6 @@ extract.commits <- function(x){
 ## Define Anchor Model
 
 ```{r model}
-library(devtools)
-load_all("anchormodeling")
-#library(anchormodeling)
-
 am <- AM$new()
 am$add$A(mne = "AU", desc = "Author")
 am$add$a(mne = "NAM", desc = "Name", hist = TRUE, anchor = "AU")
@@ -96,7 +95,7 @@ mapping <- list(anchor1_mne = list(natural_key_column_names,
                                    attr3_mne = c(column_name, "hist" = historize_column_name, "knot" = knot_mne)))
 ```
 
-So on git data model.
+On our simple git repo data model.
 
 ```{r mapping}
 mapping <- list(CM = list("commit",
@@ -116,7 +115,7 @@ am$load(mapping, commits1, meta = 1L)
 am$load(mapping, commits1, meta = list(meta = 2L, user = "manual", src = "git log")) # log custom details
 ```
 
-Duplicates insert was handled automatically.  
+Duplicate inserts were handled automatically.  
 To controling temporal duplicates use *restatement* feature when create *attributes*/*knots* by `rest = FALSE` argument or at start `options("am.restatability" = FALSE)` globally.  
 
 ## Query data
@@ -133,8 +132,8 @@ Check all the below commands.
 
 ```{r status_initial_load}
 am
-am$etl
-am$log # you should notice your OS user name on `meta==1L`
+am$etl # you should notice your OS user name on `meta==1L`
+am$log
 am$IM()
 ```
 
@@ -162,14 +161,14 @@ Exported xml does not contain non-model fields like data types. Also it won't ex
 
 Current model can look like that.  
 
-![Git repo AM first iteration](/path/git-am1.png)
+![Git repo AM first iteration](git-am1.png)
 
 If you don't like how your model looks like you can use *Layout* menu and *Release all fixed* or *Randomize layout* options.  
 
 ## Incremental loading
 
 Produce new batch of data from git repo.  
-Limited by `--before="2015-01-01"`. All historical data duplicates will be handled.   
+Limited by `--before="2015-01-01"`. Duplicates handled.  
 
 ```sh
 git log \
@@ -196,7 +195,7 @@ am$IM()
 
 ## Evolving model
 
-Add commits details to model.  
+Add individual file insertions/deletions details - `git log --numstat`.  
 
 ```sh
 git log \
@@ -239,7 +238,6 @@ mapping.numstat <- list(FI = list(c("commit","path"),
                                   PAT = "path",
                                   INS = "insertions",
                                   DEL = "deletions"))
-
 am$run()
 ```
 
@@ -265,9 +263,9 @@ am$IM()
 
 [data.table](https://github.com/Rdatatable/data.table) design assumes from the early days to handle time series data well.  
 
-  - fast joins
-  - fast rolling joins
-  - fast overlaping joins (range)
+> fast joins  
+> fast rolling joins  
+> fast overlaping joins (range)  
 
 All of them are going to be employed in R session memory AM instance.  
 You can use your favorite data analysis packages on top of AM 3NF views.  
