@@ -70,7 +70,7 @@ AMobj <- R6Class(
         size = function() object.size(self$data)
     ),
     private = list(
-        load_log = list()
+        load_log = list(list(meta = integer(), src = character(), user = character(), timestamp = Sys.time()[-1L], code = character(), in_nrow = integer(), unq_nrow = integer(), load_nrow = integer(), load_time = numeric()))
     ),
     active = list(
         log = function() rbindlist(private$load_log)

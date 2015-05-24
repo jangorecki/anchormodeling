@@ -21,6 +21,7 @@ AM <- R6Class(
             private$hist_col <- hist_col
             private$log_list <- list(list(event = "initialize AM", obj = NA_character_, timestamp = Sys.time()))
             im <<- IM$new()
+            private$instance_run <- FALSE
             private$log_list <- c(private$log_list, list(list(event = "initialize IM", obj = NA_character_, timestamp = Sys.time())))
             invisible(self)
         },
@@ -49,7 +50,8 @@ AM <- R6Class(
         },
         # CRUD
         create = function(class, ..., anchor){
-            private$instance_run <- FALSE
+            self$stop()
+            # input check
             if(length(class) != 1L) stop("create currently support scalar inputs only")
             if(class=="attribute"){
                 if(missing(anchor)) stop("Provide anchor mnemonic of the attribute, use `anchor` argument")
@@ -117,13 +119,11 @@ AM <- R6Class(
             new.cols <- c("anchor","anchors","parents","childs")
             exist.cols <- new.cols[new.cols %chin% names(self$data)]
             if(length(exist.cols)) self$data[, eval(exist.cols) := NULL]
-            self$data[class=="attribute", anchor := sapply(obj, function(obj) as.character(obj$anchor))
-                      ][class=="tie", anchors := lapply(obj, function(obj) as.character(obj$anchors))
-                        ]
-            self$data[class=="attribute", parents := lapply(obj, function(obj) c(as.character(obj$knot), as.character(obj$anchor)))
-                      ]
-            self$data[self$read(class="attribute")[,.(childs = list(code)),,anchor], childs := i.childs
-                      ]
+            # refresh metadata
+            self$data[class=="attribute", anchor := sapply(obj, function(obj) as.character(obj$anchor))]
+            self$data[class=="tie", `:=`(anchors = lapply(obj, function(obj) c(obj$anchors)))]
+            self$data[class=="attribute", parents := lapply(obj, function(obj) c(as.character(obj$knot), as.character(obj$anchor)))]
+            self$data[self$read(class="attribute")[,.(childs = list(code)),,anchor], childs := i.childs]
             private$instance_run <- TRUE
             private$log_list <- c(private$log_list, list(list(event = "start AM instance", obj = NA_character_, timestamp = Sys.time())))
             invisible(self)
@@ -241,17 +241,15 @@ AM <- R6Class(
         },
         xml = function(file = format(Sys.time(),"AM_%Y%m%d_%H%M%S.xml")){
             if(!self$validate()) stop("AM definition is invalid, see am$validate body for conditions")
-            meta_header <- paste0('<schema format="0.98" date="',format(Sys.Date(),"%Y-%m-%d"),'" time="',format(Sys.time(),"%H:%M:%S"),'">')
-            tech_header <- paste0('<metadata changingRange="datetime" encapsulation="dbo" identity="int" metadataPrefix="Metadata" metadataType="int" metadataUsage="true" changingSuffix=',private$hist_col,' identitySuffix="ID" positIdentity="int" positGenerator="true" positingRange="datetime" positingSuffix="PositedAt" positorRange="tinyint" positorSuffix="Positor" reliabilityRange="tinyint" reliabilitySuffix="Reliability" reliableCutoff="1" deleteReliability="0" reliableSuffix="Reliable" partitioning="false" entityIntegrity="true" restatability="true" idempotency="false" assertiveness="true" naming="improved" positSuffix="Posit" annexSuffix="Annex" chronon="datetime2(7)" now="sysdatetime()" dummySuffix="Dummy" versionSuffix="Version" statementTypeSuffix="StatementType" checksumSuffix="Checksum" businessViews="false" equivalence="false" equivalentSuffix="EQ" equivalentRange="tinyint" databaseTarget="SQLServer" temporalization="uni"/>')
-            footer <- "</schema>"
-            lines <- c(meta_header, tech_header)
+            lines <- paste0('<schema format="0.98" date="',format(Sys.Date(),"%Y-%m-%d"),'" time="',format(Sys.time(),"%H:%M:%S"),'">')
+
             lines <- c(lines, if(nrow(self$read(class="knot")) > 0L) self$read(class="knot")[, sapply(obj, function(obj) obj$xml())])
             matched_attr <- quote(self$read(class="attribute")[sapply(obj, function(obj) obj[["anchor"]])==anchor_code])
             for(anchor_code in self$read(class="anchor")$code){ # for each anchor nest attributes
                 if(nrow(eval(matched_attr)) > 0) lines <- c(lines, self$read(code = anchor_code)[, sapply(obj, function(obj) obj$xml(attributes = eval(matched_attr)))]) # batch lookup to all anchors attributes
             }
             lines <- c(lines, unlist(sapply(self$read(class="tie")$obj, function(obj) obj$xml())))
-            lines <- c(lines, footer)
+            lines <- c(lines, "</schema>")
             private$log_list <- c(private$log_list, list(list(event = "AM model exported", obj = file, timestamp = Sys.time())))
             write(lines, file=file, append=FALSE)
             invisible(file)
@@ -268,7 +266,13 @@ AM <- R6Class(
             invisible(self)
         },
         stop = function(){
+            if(!private$instance_run) return(invisible(self))
+            # clean calculated columns
+            new.cols <- c("anchor","anchors","parents","childs")
+            exist.cols <- new.cols[new.cols %chin% names(self$data)]
+            if(length(exist.cols)) self$data[, eval(exist.cols) := NULL]
             private$instance_run <- FALSE
+            private$log_list <- c(private$log_list, list(list(event = "stop AM instance", obj = NA_character_, timestamp = Sys.time())))
             invisible(self)
         }
     ),
