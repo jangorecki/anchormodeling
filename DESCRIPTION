@@ -10,4 +10,4 @@ License: GPL-3
 Depends: data.table (>= 1.9.5)
 Imports: R6
 Enhances: microbenchmark
-Suggests: testthat, shiny, shinydashboard, DT
+Suggests: testthat, jsonlite, shiny, shinydashboard, DT

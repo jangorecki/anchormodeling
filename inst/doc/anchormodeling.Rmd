@@ -5,17 +5,19 @@ You should have already installed [anchormodeling](https://github.com/jangorecki
 
 ## Define domain
 
-Package already has working built-in example model for *Stage performances* domain. Use function `actor.am` to populate various iterations of the model. Use `actor.data` to populate example source data.  
+Inside the package there is already working example model for *Stage performances* domain, see `?actor.am`, `?actor.data` to populate model/data.  
 
-In the document I will define basic model for git repository data.  
+In this document I will define basic model for git repository data.  
 You can use git's *traveling in time* ability to easily produce data which evolves over time.  
+You can follow example locally on your machines.  
 
 ## Extract data from git
 
-In the working directory of the R session create subdir inside it git clone your repo.  
-I will use [bitcoin](https://github.com/bitcoin/bitcoin) repo as it is a good example of distributed project: 300 contributors, 8400 commits, 4000 pull requests!
+In the working directory create subdir for git clone your repo.  
+I will use [bitcoin](https://github.com/bitcoin/bitcoin) repo as it is a good example of distributed project: 300 contributors, 8400 commits, 4000 pull requests.
 
 You can use shell script to generate source data directly from git repo.  
+Limited by `--before="2014-01-01"`.   
 
 ```sh
 mkdir wd
@@ -24,30 +26,14 @@ git clone https://github.com/bitcoin/bitcoin
 cd bitcoin
 # modified https://gist.github.com/textarcana/1306223
 git log \
+    --before="2014-01-01" \
     --pretty=format:'{%n  "commit": "%H",%n  "author": "%an",%n  "author_email": "%ae",%n  "timestamp": "%at",%n  "message": "%f"%n},' \
     $@ | \
     perl -pe 'BEGIN{print "["}; END{print "]\n"}' | \
-    perl -pe 's/},]/}]/' > ../commits.json
-git log \
-    --numstat \
-    --format='%H' \
-    $@ | \
-    perl -lawne '
-        if (defined $F[1]) {
-            print qq#{"insertions": "$F[0]", "deletions": "$F[1]", "path": "$F[2]"},#
-        } elsif (defined $F[0]) {
-            print qq#],\n"$F[0]": [#
-        };
-        END{print qq#],#}' | \
-    tail -n +2 | \
-    perl -wpe 'BEGIN{print "{"}; END{print "}"}' | \
-    tr '\n' ' ' | \
-    perl -wpe 's#(]|}),\s*(]|})#$1$2#g' | \
-    perl -wpe 's#,\s*?}$#}#' > ../numstats.json
-cd ..
+    perl -pe 's/},]/}]/' > ../commits2013.json
 ```
 
-Make sure you navigate back to your `wd` directory and run R.  
+In new session navigate to your `wd` directory and run R.    
 
 ```sh
 R
@@ -56,43 +42,39 @@ R
 Source data *json* files are ready to be picked up.  
 Can be easiy loaded using [jsonlite](https://github.com/jeroenooms/jsonlite).  
 
-```r
+```{r extract_commits}
 library(jsonlite)
 extract.commits <- function(x){
     char_cols <- c("commit","author","author_email","message") # handle encoding
     setDT(fromJSON(x))[, `:=`(timestamp = as.POSIXct(as.integer(timestamp), origin="1970-01-01"))
                        ][, c(char_cols) := lapply(.SD, function(x) {Encoding(x) <- "unknown"; x}), .SDcols = char_cols]
 }
-extract.numstats <- function(x){
-    char_cols <- c("commit","path") # handle encoding
-    rbindlist(fromJSON(x), idcol = "commit")[insertions=="-", insertions := NA_character_
-                                             ][deletions=="-", deletions := NA_character_
-                                               ][, `:=`(insertions=as.integer(insertions), deletions=as.integer(deletions))
-                                                 ][, c(char_cols) := lapply(.SD, function(x) {Encoding(x) <- "unknown"; x}), .SDcols = char_cols]
-}
-
 ```
 
 ## Define Anchor Model
 
-```r
-library(anchormodeling)
+```{r model}
+library(devtools)
+load_all("anchormodeling")
+#library(anchormodeling)
 
 am <- AM$new()
 am$add$A(mne = "AU", desc = "Author")
 am$add$a(mne = "NAM", desc = "Name", hist = TRUE, anchor = "AU")
 am$add$a(mne = "EMA", desc = "Email", hist = TRUE, anchor = "AU")
-am$add$A(mne = "BR", desc = "Branch")
+# am$add$A(mne = "BR", desc = "Branch")
 am$add$A(mne = "CM", desc = "Commit")
 am$add$a(mne = "TIM", desc = "Time", anchor = "CM")
 am$add$a(mne = "MES", desc = "Message", anchor = "CM")
 am$add$a(mne = "TAG", desc = "Tag", anchor = "CM")
 am$add$a(mne = "HSH", desc = "Hash", anchor = "CM")
+am$add$t(anchors = c("AU","CM"), roles = c("authoring","of"), identifier = c(1,Inf))
+am$validate()
 ```
 
 ## Run AM Data Warehouse instance
 
-```r
+```{r run}
 am$run()
 ```
 
@@ -116,7 +98,7 @@ mapping <- list(anchor1_mne = list(natural_key_column_names,
 
 So on git data model.
 
-```r
+```{r mapping}
 mapping <- list(CM = list("commit",
                           MES = "message",
                           TIM = "timestamp",
@@ -128,34 +110,20 @@ mapping <- list(CM = list("commit",
 
 `meta` argument is used as processing batch metadata. Can be integer `meta` or list, see example.  
 
-```r
-commits <- extract.commits("commits.json")
-am$load(mapping, commits, meta = 1L)
-am$load(mapping, commits, meta = list(meta = 2L, user = "manual", src = "csv1")) # log custom details
+```{r load}
+commits1 <- extract.commits("commits2013.json")
+am$load(mapping, commits1, meta = 1L)
+am$load(mapping, commits1, meta = list(meta = 2L, user = "manual", src = "git log")) # log custom details
 ```
 
-Incremental loading.
-
-```r
-# numstat.json
-
-meta <- 3L # incrementing batch
-commit.filenames <- c("commits.json")
-for(filename in commit.filenames){
-    commits <- extract.commits(filename)
-    am$load(mapping, commits, meta = list(meta=meta, user = "job1", src = filename))
-    meta <- meta + 1L
-}
-```
-
-We loaded first file triple. This is not a big deal for Anchor Model DW.  
-If we would use *restatement* feature by `options("am.restatability" = FALSE)` globally or locally on create attributes/knots by `rest = FALSE` argument, then we can totally ignore such cases as no duplicates, including temporal duplicates, will be inserted.  
+Duplicates insert was handled automatically.  
+To controling temporal duplicates use *restatement* feature when create *attributes*/*knots* by `rest = FALSE` argument or at start `options("am.restatability" = FALSE)` globally.  
 
 ## Query data
 
 3NF are not yet ready.  
 
-```r
+```{r view}
 # am$view() # TO DO
 ```
 
@@ -163,30 +131,133 @@ If we would use *restatement* feature by `options("am.restatability" = FALSE)` g
 
 Check all the below commands.
 
-```r
+```{r status_initial_load}
 am
 am$etl
-am$log # you should notice your OS user name on `meta==2L`
+am$log # you should notice your OS user name on `meta==1L`
 am$IM()
 ```
 
 ## Save AM instance
 
-```r
+```{r stop}
 am$stop()
-save(am, file = format(Sys.time(),"AM_%Y%m%d_%H%M%S.RData"))
+save(am, mapping, extract.commits, file = "git-am.RData")
+# loading
+load("git-am.RData")
+am$run()
 ```
 
 Loading anchor model from the *RData* was not yet tested.
 
 ## Export model
 
-```r
+```{r xml}
 am$xml()
 ```
 
 File can be loaded in official Anchor Modeler Test: [roenbaeck.github.io/anchor](http://roenbaeck.github.io/anchor/)  
-Exported xml does not contain non-model fields like data types. Also it won't export restatability definition as it is part of metadata of model. This may be subject to change in Anchor Modeling itself, see [anchor#4](https://github.com/Roenbaeck/anchor/issues/4).  
+After loading xml file don't forget to click *Play* button.  
+Exported xml does not contain non-model fields like data types. Also it won't export restatability definition as it is part of metadata of model in current XML schema. This may be subject to change in Anchor Modeling, see [anchor#4](https://github.com/Roenbaeck/anchor/issues/4).  
+
+Current model can look like that.  
+
+![Git repo AM first iteration](/path/git-am1.png)
+
+If you don't like how your model looks like you can use *Layout* menu and *Release all fixed* or *Randomize layout* options.  
+
+## Incremental loading
+
+Produce new batch of data from git repo.  
+Limited by `--before="2015-01-01"`. All historical data duplicates will be handled.   
+
+```sh
+git log \
+    --before="2015-01-01" \
+    --pretty=format:'{%n  "commit": "%H",%n  "author": "%an",%n  "author_email": "%ae",%n  "timestamp": "%at",%n  "message": "%f"%n},' \
+    $@ | \
+    perl -pe 'BEGIN{print "["}; END{print "]\n"}' | \
+    perl -pe 's/},]/}]/' > ../commits2014.json
+```
+
+Go back to R.
+
+```{r incremental_load}
+commits2 <- extract.commits("commits2014.json")
+am$load(mapping, commits2, meta = list(meta = 3L, src = "git log"))
+```
+
+```{r status_incremental_load}
+am
+am$etl
+am$log
+am$IM()
+```
+
+## Evolving model
+
+Add commits details to model.  
+
+```sh
+git log \
+    --before="2015-01-01" \
+    --numstat \
+    --format='%H' \
+    $@ | \
+    perl -lawne '
+        if (defined $F[1]) {
+            print qq#{"insertions": "$F[0]", "deletions": "$F[1]", "path": "$F[2]"},#
+        } elsif (defined $F[0]) {
+            print qq#],\n"$F[0]": [#
+        };
+        END{print qq#],#}' | \
+    tail -n +2 | \
+    perl -wpe 'BEGIN{print "{"}; END{print "}"}' | \
+    tr '\n' ' ' | \
+    perl -wpe 's#(]|}),\s*(]|})#$1$2#g' | \
+    perl -wpe 's#,\s*?}$#}#' > ../numstats2014.json
+```
+
+```{r extract_numstats}
+extract.numstats <- function(x){
+    char_cols <- c("commit","path") # handle encoding
+    rbindlist(fromJSON(x), idcol = "commit")[insertions=="-", insertions := NA_character_
+                                             ][deletions=="-", deletions := NA_character_
+                                               ][, `:=`(insertions=as.integer(insertions), deletions=as.integer(deletions))
+                                                 ][, c(char_cols) := lapply(.SD, function(x) {Encoding(x) <- "unknown"; x}), .SDcols = char_cols]
+}
+```
+
+```{r evolve_model}
+am$add$A(mne = "FI", desc = "File")
+am$add$a(mne = "PAT", desc = "Path", anchor = "FI")
+am$add$a(mne = "INS", desc = "Insertions", anchor = "FI")
+am$add$a(mne = "DEL", desc = "Deletions", anchor = "FI")
+am$add$t(anchors = c("FI","CM"), roles = c("changed","in"), identifier = c(Inf,Inf))
+am$validate()
+mapping.numstat <- list(FI = list(c("commit","path"),
+                                  PAT = "path",
+                                  INS = "insertions",
+                                  DEL = "deletions"))
+
+am$run()
+```
+
+```{r evolved_load}
+numstats1 <- extract.numstats("numstats2014.json")
+am$load(mapping.numstat, numstats1, meta = list(meta = 4L, src = "git log"))
+```
+
+```{r evolved_view}
+# am$view()
+```
+
+```{r status_evolved_load}
+am
+am$etl
+am$log
+am$IM()
+```
 
 ## Questions
 
@@ -204,8 +275,8 @@ You can use your favorite data analysis packages on top of AM 3NF views.
 - How to start?
 
 Model any data, your model can non-destructivly grow over time so you can think about it later!  
-In this doc you have example on loading git repo data. If you have some DWH data already, you can just use a minimal subset of it.  
-I've found [video tutorial by Clint Huijbers](https://clinthuijbers.wordpress.com/2013/06/14/ssis-anchor-modeling-example-tutorial/) nice and simple.
+In this doc you have example on loading git repo data, apply it on some other repo.  
+If you have some DWH data already, you can just use a minimal subset of it.  
 
 - Stability of project?
 
@@ -219,10 +290,10 @@ You are welcome to add your unit tests which can be included in automated unit t
 - data stored in-memory
 - built-in ETL
 - triggers are replaced by functions
-- does not support *concurrent-reliance-temporal*
 - built-in Identity Management
 - built-in dashboard
 - high performance data processing using [data.table](https://github.com/Rdatatable/data.table)
+- does not support *concurrent-reliance-temporal*
 - easy multiple AM instances in R session
 
 ## Project road map
