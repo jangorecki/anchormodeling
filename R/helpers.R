@@ -66,3 +66,18 @@ format.object_size <- function (x, units = "b", ...) {
            Mb = , MB = paste(round(x/1024^2, 1L), "MB"),
            Gb = , GB = paste(round(x/1024^3, 1L), "GB"))
 }
+
+exclude.last <- function(x){
+    if(is.data.table(x)){
+        x[, exclude.last(names(x)), with=FALSE]
+    } else x[-length(x)]
+}
+
+exclude.first <- function(x){
+    if(is.data.table(x)){
+        x[, exclude.first(names(x)), with=FALSE]
+    } else x[-1L]
+}
+
+now <- function(class = "POSIXct") switch(class, "POSIXct" = Sys.time(), "Date" = Sys.Date())
+
