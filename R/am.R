@@ -234,15 +234,56 @@ AM <- R6Class(
             })
             invisible(self)
         },
-        view = function(key){
+        OBJ = function(code) self$read(code)$obj[[1L]],
+        joinv = function(master, join, allow.cartesian){
+            # simplified jangorecki/dwtools::joinbyv
+            # basic input check: master and join
+            stopifnot(all(!missing(master),!missing(join))) # non missing mandatory args
+            if(!is.data.table(master)) master <- master[[1]] # conver master list(DT) to DT
+            stopifnot(
+                is.data.table(master),
+                !is.data.table(join),
+                is.list(join),
+                haskey(master),
+                all(sapply(join, haskey))
+            )
+            # exec main loop
+            for(i in 1:length(join)){
+                master <- join[[i]][master, allow.cartesian = allow.cartesian][, setnames(.SD,names(join[[i]])[1L],names(master)[1L])]
+            }
+            master
+        },
+        view = function(mne, type = "current", timepoint){
+            stopifnot(mne %chin% self$read(class="anchor")$mne, type %chin% c("latest","timepoint","current","difference"))
             # denormalize to 3NF
-            # optionally setkey
-            stop("not yet ready, use am$read()")
+            childs <- self$read(mne)$childs[[1L]]
+            if(length(childs)==0L) stop("Anchor has no attributes")
+            childs.knotted <- self$read(childs)[, code[sapply(knot, isTRUE)]]
+            childs.historized <- self$read(childs)[, code[sapply(hist, isTRUE)]]
+            filterNA <- function(x, cols){
+                if(missing(cols) || length(cols)==0) x else x[!(x[, .(`.na` = all(is.na(.SD))), seq_len(nrow(x)), .SDcols = c(cols)]$.na)]
+            } # filter out NA on particular columns - used for historized attributes to filter out future static data when quering past
+            filterNA(self$joinv(
+                master = self$OBJ(mne)$query(),
+                join = lapply(childs, function(child){
+                    # this will automatically lookup knots to attributes which are knotted
+                    if(child %chin% childs.knotted){
+                        knot <- self$read(child)$knot
+                        knot_data <- quote(self$OBJ(knot)$query())
+                        attr_data <- quote(self$OBJ(child)$query(type = type, timepoint = timepoint)[,.SD,,keyby = c(self$OBJ(knot)$keys)])
+                        eval(knot_data)[eval(attr_data)
+                                        ][,.SD,,keyby = c(self$OBJ(child)$keys)
+                                          ] # rename knots to prefix attributes! # TO DO TEST
+                    } else {
+                        self$OBJ(child)$query(type = type, timepoint = timepoint)
+                    }
+                }),
+                allow.cartesian = isTRUE(type=="difference") # only 'difference' views can explode rows
+            ), cols = if(length(childs.historized)) self$read(childs.historized)[, sapply(obj, function(obj) obj$cols[2L])])
         },
         xml = function(file = format(Sys.time(),"AM_%Y%m%d_%H%M%S.xml")){
             if(!self$validate()) stop("AM definition is invalid, see am$validate body for conditions")
             lines <- paste0('<schema format="0.98" date="',format(Sys.Date(),"%Y-%m-%d"),'" time="',format(Sys.time(),"%H:%M:%S"),'">')
-
             lines <- c(lines, if(nrow(self$read(class="knot")) > 0L) self$read(class="knot")[, sapply(obj, function(obj) obj$xml())])
             matched_attr <- quote(self$read(class="attribute")[sapply(obj, function(obj) obj[["anchor"]])==anchor_code])
             for(anchor_code in self$read(class="anchor")$code){ # for each anchor nest attributes

@@ -20,12 +20,20 @@ AMobj <- R6Class(
             if(!db) self$data <- setkeyv(rbindlist(list(self$data, data), use.names=TRUE), self$keys) else stop("db backend not ready")
             return(invisible(self))
         },
-        query = function(latest = FALSE, db = FALSE){
-            if(!db){
-                if(latest) self$data[] else self$data
-            } else {
-                if(latest) setDT(NULL, key=self$keys) else setDT(NULL, key=self$keys)
+        query = function(type, timepoint, db = FALSE){
+            if(db){
+                stop("db backend not implemented")
             }
+            if(missing(type) || !isTRUE(self$hist)) return(self$data)
+            # hist=TRUE
+            stopifnot(is.character(type))
+            query <- switch(type,
+                            "latest" = quote(self$data[, tail(.SD, 1L), by=c(exclude.last(self$keys))]),
+                            "timepoint" = quote(self$data[eval(as.name(last(self$keys))) <= timepoint, tail(.SD, 1L), by=c(exclude.last(self$keys))]),
+                            "current" = quote(self$data[eval(as.name(last(self$keys))) <= now(class1(eval(as.name(last(self$keys))))), tail(.SD, 1L), by=c(exclude.last(self$keys))]),
+                            "difference" = quote(self$data[eval(as.name(last(self$keys))) %between% timepoint])
+            )
+            eval(query)
         },
         nrow = function(db = FALSE){
             if(!db) nrow(self$data) else NA_integer_ # as.integer(dbGetQuery(conn, paste0("SELECT COUNT(*) AS cnt FROM ",self$name,";"))$cnt)[1L]

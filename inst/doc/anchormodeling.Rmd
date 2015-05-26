@@ -43,9 +43,9 @@ Source data *json* files are ready to be picked up.
 Can be easiy loaded using [jsonlite](https://github.com/jeroenooms/jsonlite).  
 
 ```{r extract_commits}
-#library(devtools)
-#load_all("anchormodeling")
-library(anchormodeling)
+library(devtools)
+load_all("anchormodeling")
+#library(anchormodeling)
 library(jsonlite)
 extract.commits <- function(x){
     char_cols <- c("commit","author","author_email","message") # handle encoding
@@ -60,7 +60,7 @@ extract.commits <- function(x){
 am <- AM$new()
 am$add$A(mne = "AU", desc = "Author")
 am$add$a(mne = "NAM", desc = "Name", hist = TRUE, anchor = "AU")
-am$add$a(mne = "EMA", desc = "Email", hist = TRUE, anchor = "AU")
+am$add$a(mne = "EMA", desc = "Email", anchor = "AU")
 # am$add$A(mne = "BR", desc = "Branch")
 am$add$A(mne = "CM", desc = "Commit")
 am$add$a(mne = "TIM", desc = "Time", anchor = "CM")
@@ -102,9 +102,9 @@ mapping <- list(CM = list("commit",
                           MES = "message",
                           TIM = "timestamp",
                           HSH = "commit"),
-                AU = list(c("author","author_email"), # composite natural key
+                AU = list("author_email", # natural key
                           NAM = c("author", hist = "timestamp"),
-                          EMA = c("author_email", hist = "timestamp")))
+                          EMA = "author_email"))
 ```
 
 `meta` argument is used as processing batch metadata. Can be integer `meta` or list, see example.  
@@ -123,7 +123,11 @@ To controling temporal duplicates use *restatement* feature when create *attribu
 3NF are not yet ready.  
 
 ```{r view}
-# am$view() # TO DO
+# am$view("AU")
+am$view("AU", type = "current")
+am$view("AU", type = "latest")
+am$view("AU", type = "timepoint", timepoint = as.POSIXct("2012-01-01 00:00:00", origin="1970-01-01"))
+am$view("AU", type = "difference", timepoint = c(as.POSIXct("2012-01-01 00:00:00", origin="1970-01-01"), as.POSIXct("2012-02-01 00:00:00", origin="1970-01-01")))
 ```
 
 ## Query metadata
