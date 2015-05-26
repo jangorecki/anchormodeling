@@ -247,14 +247,27 @@ AM <- R6Class(
                 haskey(master),
                 all(sapply(join, haskey))
             )
-            # exec main loop
-            for(i in 1:length(join)){
-                master <- join[[i]][master, allow.cartesian = allow.cartesian][, setnames(.SD,names(join[[i]])[1L],names(master)[1L])]
+            # for non-difference view exec main loop with lookups, also difference views where all anchor attributes are non historized
+            if(!allow.cartesian){
+                for(i in 1:length(join)){
+                    master <- join[[i]][master, allow.cartesian = allow.cartesian][, setnames(.SD,names(join[[i]])[1L],names(master)[1L])]
+                }
+            }
+            # for difference view exec lookup distinct id-time, union and then use as master and rolling to joins
+            if(allow.cartesian){
+                master <- unique(rbindlist(lapply(join, function(join) if(length(key(join)) == 2L) join[, unique(.SD), .SDcols = c(key(join))])))
+                setkeyv(master, names(master))
+                browser()
+                for(i in 1:length(join)){
+                    # TO DO add roll join as substitute of LATERAL JOIN
+                    master <- join[[i]][master, allow.cartesian = allow.cartesian][, setnames(.SD,names(join[[i]])[1L],names(master)[1L])]
+                }
             }
             master
         },
         view = function(mne, type = "current", timepoint){
-            stopifnot(mne %chin% self$read(class="anchor")$mne, type %chin% c("latest","timepoint","current","difference"))
+            stopifnot(mne %chin% self$read(class=c("anchor","tie"))$mne, type %chin% c("latest","timepoint","current","difference"))
+            if(mne %chin% self$read(class="tie")$mne) return(self$OBJ(mne)$query(type = type, timepoint = timepoint)) # TO DO knot lookup and filterNA?
             # denormalize to 3NF
             childs <- self$read(mne)$childs[[1L]]
             if(length(childs)==0L) stop("Anchor has no attributes")
@@ -278,7 +291,7 @@ AM <- R6Class(
                         self$OBJ(child)$query(type = type, timepoint = timepoint)
                     }
                 }),
-                allow.cartesian = isTRUE(type=="difference") # only 'difference' views can explode rows
+                allow.cartesian = (length(childs.historized) > 0L) && isTRUE(type=="difference") # only 'difference' views can explode rows excluding non historized
             ), cols = if(length(childs.historized)) self$read(childs.historized)[, sapply(obj, function(obj) obj$cols[2L])])
         },
         xml = function(file = format(Sys.time(),"AM_%Y%m%d_%H%M%S.xml")){

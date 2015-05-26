@@ -38,7 +38,7 @@
     - [x] add metadata id
     - [x] add metadata src + auto (using deparse-substitute on dataset variable name)
     - [x] add metadata user + auto
-    - [x] restatement
+    - [x] restatement + idempotency
     - [x] append log
   - [x] AMobj$insert
     - [x] rbindlist

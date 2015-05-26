@@ -60,7 +60,7 @@ AMobj <- R6Class(
                 stopifnot(identical(self$types(), sapply(data, class1)))
                 # filter out exactly same rows by ID and hist
                 data <- data[!self$query()]
-                # restatement
+                # restatement check and idempotency
                 if(identical(self$rest,FALSE)){
                     # get new vs previous row
                     new_vs_prev <- quote(self$query()[data, which(!ST_NAM_Stage_Name == i.ST_NAM_Stage_Name | is.na(ST_NAM_Stage_Name)), roll = Inf])
