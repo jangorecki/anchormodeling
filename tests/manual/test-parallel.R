@@ -1,5 +1,8 @@
 library(microbenchmark)
 library(data.table) # 1.9.5+
+
+## USE THIS?: http://stackoverflow.com/a/30466237/2490497
+
 # system.time replacement just for elapsed time
 # system.time <- nano.time <- function(expr, gcFirst = TRUE){
 #     if (gcFirst)
