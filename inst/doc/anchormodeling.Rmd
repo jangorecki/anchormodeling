@@ -61,7 +61,6 @@ am <- AM$new()
 am$add$A(mne = "AU", desc = "Author")
 am$add$a(mne = "NAM", desc = "Name", hist = TRUE, anchor = "AU")
 am$add$a(mne = "EMA", desc = "Email", anchor = "AU")
-# am$add$A(mne = "BR", desc = "Branch")
 am$add$A(mne = "CM", desc = "Commit")
 am$add$a(mne = "TIM", desc = "Time", anchor = "CM")
 am$add$a(mne = "MES", desc = "Message", anchor = "CM")
@@ -144,8 +143,13 @@ am$IM()
 ## Save AM instance
 
 ```{r stop}
+# saving
 am$stop()
 save(am, mapping, extract.commits, file = "git-am.RData")
+
+# remove
+rm(am, mapping, extract.commits)
+
 # loading
 load("git-am.RData")
 am$run()
@@ -265,14 +269,7 @@ am$IM()
 
 - Why it is so fast?  
 
-[data.table](https://github.com/Rdatatable/data.table) design assumes from the early days to handle time series data well.  
-
-> fast joins  
-> fast rolling joins  
-> fast overlaping joins (range)  
-
-All of them are going to be employed in R session memory AM instance.  
-You can use your favorite data analysis packages on top of AM 3NF views.  
+[data.table](https://github.com/Rdatatable/data.table) design assumed from the early days to handle time series data well. Thanks to clustered key it can perform multiple types of joins very efficiently: equi join, rolling join (cross apply/cross join lateral), overlapping join (range join), nonequi join can be done by overlapping join or cross join and filter. See [implementation doc](inst/doc/implementation.md) for implementation details.  
 
 - How to start?
 
