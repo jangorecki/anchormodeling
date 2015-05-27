@@ -1,0 +1,25 @@
+context("AM validate method")
+
+test_that("AM model definition validation", {
+
+    am <- AM$new()
+    am$create(class = "anchor", mne = "AC", desc = "Actor")
+    expect_true(am$validate(), info = "single anchor, no error")
+    am$create(class = "attribute", anchor = "AC", mne = "NAM", desc = "Name")
+    expect_true(am$validate(), info = "single anchor and one attr, no error")
+    am$create(class = "attribute", anchor = "AC", mne = "GEN", desc = "Gender", knot = "GEN")
+    expect_error(am$validate(), "Each knotted attribute must be linked to existing knot.", info = "single anchor and two attrs where one is knotted whie no knot, error")
+    am$create(class = "knot", mne = "GEN", desc = "Gender")
+    expect_true(am$validate(), info = "single anchor and two attrs and one knot, no error")
+    am$create(class = "anchor", mne = "PE", desc = "Performance")
+    expect_error(am$validate(), "All anchors must be linked with ties.", info = "two anchors, no tie, error")
+    am$create(class = "tie", anchors = c("AC","PE"), roles = c("wasCasted","in"), identifier = c(Inf,Inf))
+    expect_true(am$validate(), info = "two anchor with tie, no error")
+    am$create(class = "anchor", mne = "PR", desc = "Program")
+    expect_error(am$validate(), "All anchors must be linked with ties.", info = "three anchors, two ties, error")
+    am$create(class = "tie", anchors = c("AC","PR"), roles = c("part","in"), identifier = c(Inf,Inf,1), knot = "RAT")
+    expect_error(am$validate(), "Each knotted tie must be linked to existing knot.", info = "three anchors and unknotted tie, error")
+    am$create(class = "knot", mne = "RAT", desc = "Rating")
+    expect_true(am$validate(), info = "three anchor with ties and knots, no error")
+
+})
