@@ -1,5 +1,8 @@
 # Implementation notes
 
+AM instance is an R6 reference class objects, it stores some metadata and `AM$data` data.table storing anchor modeling entities, called `AMobj` here, which is simply a superclass for classes *anchor*, *attribute*, *tie*, *knot*, all those are stored in `obj` column: `AM$data$obj`.  
+*AM* class is a anchor modeling metadata manager, while *AMobj* objects are the entities in model.  
+
 For the *difference* views the sqlserver *cross apply* or postgres *cross join lateral* has been substituted by data.table *rolling join*. Distinct union of all historized attributes (fields: ID and timestamp) which presents all combinations of PK is joined to each attribute using *rolling join*. The code responsible for that you can find in `AM$joinv` method.  
 
 Additionally, *rolling join* has been used to handle *restatement*/*idempotency* while loading data into AM instance. There are two rolling joins, one vs past `roll = +Inf` and one vs future `roll = -Inf`. Can be found in `AMobj$load` method.  
