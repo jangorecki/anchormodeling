@@ -150,7 +150,7 @@ AM <- R6Class(
             } # src columns "" / NULL exists in data to load # apply over elements in the mapping and then over names of each attribute definition
             model_all_attr_codes_for_anchors <- setNames(self$read(names(mapping))$childs, names(mapping))
             # key by hist and knot only for batch attributes match to model, by defined hist, knot, mne, anchor
-            model_attrs_lkp <- quote(self$read(unique(unlist(model_all_attr_codes_for_anchors)))[, .(code),, .(class, anchor, mne, hist, knot)])
+            model_attrs_lkp <- quote(self$read(unique(unlist(model_all_attr_codes_for_anchors)))[, .(code),, .(class, anchor, mne, hist)])
             # transform mapping to data.table
             mapping_attrs_dt <- tryCatch(
                 rbindlist(lapply(names(mapping),
@@ -171,7 +171,7 @@ AM <- R6Class(
                 warning = function(w) stop("Invalid mapping definition, see examples how to define mapping"),
                 error = function(e) stop("Invalid mapping definition, see examples how to define mapping")
             )
-            setkeyv(mapping_attrs_dt, c("class","anchor","mne","hist","knot"))
+            setkeyv(mapping_attrs_dt, c("class","anchor","mne","hist"))
             # first pass loop checks on composite key join
             mapping_attrs_dt[ eval(model_attrs_lkp), `:=`(code = i.code)]
             if(any(is.na(mapping_attrs_dt$code))){
