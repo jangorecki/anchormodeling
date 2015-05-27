@@ -269,12 +269,12 @@ am$IM()
 
 - Why it is so fast?  
 
-[data.table](https://github.com/Rdatatable/data.table) design assumed from the early days to handle time series data well. Thanks to clustered key it can perform multiple types of joins very efficiently: equi join, rolling join (cross apply/cross join lateral), overlapping join (range join), nonequi join can be done by overlapping join or cross join and filter. See [implementation doc](inst/doc/implementation.md) for implementation details.  
+[data.table](https://github.com/Rdatatable/data.table) design assumed from the early days to handle time series data well. Thanks to clustered key it can perform multiple types of joins very efficiently: equi join, rolling join (cross apply/cross join lateral), overlapping join (range join), nonequi join can be done by overlapping join or cross join and filter. See [implementation doc](inst/doc/implementation.md) for details.  
 
 - How to start?
 
-Model any data, your model can non-destructivly grow over time so you can think about it later!  
-In this doc you have example on loading git repo data, apply it on some other repo.  
+Model any data, your model with just one anchor, model can non-destructivly grow over time so you can think about more entities later!  
+In this doc you have example on loading git repo data, you can reproduce the same process for any git repo you want.  
 If you have some DWH data already, you can just use a minimal subset of it.  
 
 - Stability of project?
