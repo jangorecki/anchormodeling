@@ -123,7 +123,7 @@ AM <- R6Class(
             self$data[class=="attribute", anchor := sapply(obj, function(obj) as.character(obj$anchor))]
             self$data[class=="tie", `:=`(anchors = lapply(obj, function(obj) c(obj$anchors)))]
             self$data[class=="attribute", parents := lapply(obj, function(obj) c(as.character(obj$knot), as.character(obj$anchor)))]
-            self$data[self$read(class="attribute")[,.(childs = list(code)),,anchor], childs := i.childs]
+            self$data[self$read(class="attribute")[,.(childs = list(code)),,anchor], childs := list(i.childs), by = .EACHI]
             private$instance_run <- TRUE
             private$log_list <- c(private$log_list, list(list(event = "start AM instance", obj = NA_character_, timestamp = Sys.time())))
             invisible(self)
