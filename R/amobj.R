@@ -62,9 +62,12 @@ AMobj <- R6Class(
                 data <- data[!self$query()]
                 # restatement check and idempotency
                 if(identical(self$rest,FALSE)){
+                    # TO DO
+                    browser()
+                    # substitute()
                     # get new vs previous row
-                    new_vs_prev <- quote(self$query()[data, which(!ST_NAM_Stage_Name == i.ST_NAM_Stage_Name | is.na(ST_NAM_Stage_Name)), roll = Inf])
-                    # get new vs  next row
+                    new_vs_prev <- quote(self$query()[data, which(!ST_NAM_Stage_Name == i.ST_NAM_Stage_Name | is.na(ST_NAM_Stage_Name)), roll = +Inf])
+                    # get new vs next row
                     new_vs_next <- quote(self$query()[data, which(!ST_NAM_Stage_Name == i.ST_NAM_Stage_Name | is.na(ST_NAM_Stage_Name)), roll = -Inf])
                     # subset
                     data <- data[intersect(eval(new_vs_prev), eval(new_vs_next))]

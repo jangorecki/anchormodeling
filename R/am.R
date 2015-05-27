@@ -105,7 +105,7 @@ AM <- R6Class(
             if(!all(self$data[class=="attribute", unique(unlist(lapply(obj, function(obj) obj[["anchor"]])))] %chin% self$data[class=="anchor", mne])) stop("Each attribute must be linked to existing anchor.")
             if(!all(self$data[class=="tie", unique(unlist(lapply(obj, function(obj) obj[["anchors"]])))] %chin% self$data[class=="anchor", mne])) stop("Each tie must be linked to existing anchors.")
             if(!all(self$data[class=="attribute", unique(unlist(lapply(obj, function(obj) obj[["knot"]])))] %chin% self$data[class=="knot", mne])) stop("Each knotted attribute must be linked to existing knot.")
-            if(!all(self$data[class=="tie", unique(unlist(lapply(obj, function(obj) obj[["knot"]])))] %chin% self$data[class=="knot", mne])) stop("Each knotted tie must be linked to existing knot")
+            if(!all(self$data[class=="tie", unique(unlist(lapply(obj, function(obj) obj[["knot"]])))] %chin% self$data[class=="knot", mne])) stop("Each knotted tie must be linked to existing knot.")
             if(self$data[class=="anchor", .N] > 1L){ # exclude single 1 anchors from validation
                 if(!all(self$data[class=="anchor", mne] %chin% self$data[class=="tie", unique(unlist(lapply(obj, function(obj) obj[["anchors"]])))])) stop("All anchors must be linked with ties.")
             }

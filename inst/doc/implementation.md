@@ -1,0 +1,10 @@
+# Implementation notes
+
+For the *difference* views the sqlserver *cross apply* or postgres *cross join lateral* has been substituted by data.table *rolling join*. Distinct union of all historized attributes (fields: ID and timestamp) which presents all combinations of PK is joined to each attribute using *rolling join*. The code responsible for that you can find in `AM$joinv` method.  
+
+Additionally, *rolling join* has been used to handle *restatement*/*idempotency* while loading data into AM instance. There are two rolling joins, one vs past `roll = +Inf` and one vs future `roll = -Inf`. Can be found in `AMobj$load` method.  
+
+Joining in data.table is performed on clustered keys which makes rolling joins very efficient.  
+
+Saving AM instance to off-memory storage, for later loading and operating on it, is working, but was not deeply tested.  
+User may in fact use the flexibility which gives Anchor Modeling. Besides of keeping the latest AM instance, it is simple to keep full scripts which builds the current state of AM, including data from their mirrors. An optional unit test and *continuous integration* for auto deployment is in place.  
