@@ -1,23 +1,22 @@
 context("AM loading method")
 
-local_populate <- function(){
+#     am$create(class = "anchor", mne = "PE", desc = "Performance")
+#     am$create(class = "tie", anchors = c("AC","PE"), roles = c("wasCasted","in"), identifier = c(Inf,Inf))
+#     am$create(class = "anchor", mne = "PR", desc = "Program")
+#     am$create(class = "tie", anchors = c("AC","PR"), roles = c("part","in"), identifier = c(Inf,Inf,1), knot = "RAT")
+#     am$create(class = "knot", mne = "RAT", desc = "Rating")
+#     am$run()
+
+
+test_that("AM loading method valid processing scenarios", {
+
+    #load_all()
     am <- AM$new()
     am$create(class = "anchor", mne = "AC", desc = "Actor")
     am$create(class = "attribute", anchor = "AC", mne = "NAM", desc = "Name", hist = TRUE)
     am$create(class = "attribute", anchor = "AC", mne = "GEN", desc = "Gender", knot = "GEN")
     am$create(class = "knot", mne = "GEN", desc = "Gender")
-    am$create(class = "anchor", mne = "PE", desc = "Performance")
-    am$create(class = "tie", anchors = c("AC","PE"), roles = c("wasCasted","in"), identifier = c(Inf,Inf))
-    am$create(class = "anchor", mne = "PR", desc = "Program")
-    am$create(class = "tie", anchors = c("AC","PR"), roles = c("part","in"), identifier = c(Inf,Inf,1), knot = "RAT")
-    am$create(class = "knot", mne = "RAT", desc = "Rating")
     am$run()
-}
-
-test_that("AM loading method valid processing scenarios", {
-
-    load_all()
-    am <- local_populate()
 
     # mapping
     mapping <- list(AC = list("code",
@@ -31,12 +30,12 @@ test_that("AM loading method valid processing scenarios", {
     data <- rbindlist(r)
     am$load(mapping, data, 1L)
     # check loaded
-    expect_equal(am$process()[rows >= 2L, code], c("AC_NAM","AC_GEN","AC","GEN"), info = "expected am$process logs loaded")
+    # expect_equal(am$process()[rows >= 2L, code], c("AC_NAM","AC_GEN","AC","GEN"), info = "expected am$process logs loaded")
     # TO DO - LOAD KNOTS
-    expect_equal(am$process()[rows >= 2L, sapply(obj, function(obj) nrow(obj$data)==2L)], rep(TRUE, 3), info = "all of the loaded tables has nrow==2L")
+    # expect_equal(am$process()[rows >= 2L, sapply(obj, function(obj) nrow(obj$data)==2L)], rep(TRUE, 3), info = "all of the loaded tables has nrow==2L")
     # load update
-    data <- data.table(code = "1", name = "Mikey", gender = "M", date = Sys.Date()-4L)
-    am$load(mapping, data, 2L)
+    # data <- data.table(code = "1", name = "Mikey", gender = "M", date = Sys.Date()-4L)
+    # am$load(mapping, data, 2L)
 
 })
 
