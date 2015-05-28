@@ -20,12 +20,12 @@ AM <- R6Class(
             private$naming <- naming
             private$hist_col <- hist_col
             private$log_list <- list(list(event = "initialize AM", obj = NA_character_, timestamp = Sys.time()))
-            im <<- IM$new()
+            self$im <- IM$new()
             private$instance_run <- FALSE
             private$log_list <- c(private$log_list, list(list(event = "initialize IM", obj = NA_character_, timestamp = Sys.time())))
             invisible(self)
         },
-        IM = function() im,
+        IM = function() self$im,
         process = function(pretty = FALSE, size.units = getOption("am.size.format")){
             basic_stats <- quote(self$read()[, size := am.size.format(lapply(obj, function(obj) obj$size()), units = size.units)
                                              ][, rows := sapply(obj, function(obj) obj$nrow())
@@ -178,7 +178,7 @@ AM <- R6Class(
                 stop(paste0("Some of the provided attributes have incorrect definition versus model: ", paste(mapping_attrs_dt[is.na(code), paste(anchor, mne, sep="_")], collapse=", "),". Check if they are not missing `hist` when defined."))
             } # all provided attributes in the mapping exists in model for those anchors, with expected hist and knot
             if(use.im){
-                data <- im$use(data, mne = mapping_attrs_dt[, unique(na.omit(c(anchor, knot)))], nk = lapply(mapping, `[[`, 1L), in.place = FALSE)
+                data <- self$im$use(data, mne = mapping_attrs_dt[, unique(na.omit(c(anchor, knot)))], nk = lapply(mapping, `[[`, 1L), in.place = FALSE)
             } # auto Identity Management: anchors and knots get ID in incoming data and in am$IM() but not yet in obj$data
             # prepare sequence of processing
             load_seq <- setkeyv(rbindlist(
