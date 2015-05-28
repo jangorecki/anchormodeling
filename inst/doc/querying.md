@@ -1,4 +1,4 @@
-# Quering data from DWH
+# Querying data from DWH
 
 - [x] for each anchor find all attributes
 - [ ] for each child attribute

@@ -275,7 +275,7 @@ AM <- R6Class(
             childs.historized <- self$read(childs)[, code[sapply(hist, isTRUE)]]
             filterNA <- function(x, cols){
                 if(missing(cols) || length(cols)==0) x else x[!(x[, .(`.na` = all(is.na(.SD))), seq_len(nrow(x)), .SDcols = c(cols)]$.na)]
-            } # filter out NA on particular columns - used for historized attributes to filter out future static data when quering past
+            } # filter out NA on particular columns - used for historized attributes to filter out future static data when querying past
             filterNA(self$joinv(
                 master = self$OBJ(mne)$query(),
                 join = lapply(childs, function(child){
