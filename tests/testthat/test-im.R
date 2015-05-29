@@ -32,3 +32,52 @@ test_that("IM process", {
     # info="tried auto im$create with missing nk[[mne]]"
 
 })
+
+test_that("multiple IM instances evolution process", {
+
+    set.seed(1)
+
+    im1 <- IM$new()
+    im1$create(mne = "UL", nk = "user_login")
+    im2 <- IM$new()
+    im2$create(mne = "UL", nk = "user_login")
+
+    ## first use - initial load
+    # 1
+    data <- im1$use(data = data.table(user_login = c("nick1","nick2")),
+                    mne = "UL")
+    expect_identical(names(data), c("user_login","UL_ID"), info = "result of IM$use produce expected columns, im1 1st use")
+    expect_equal(im1$ID[["UL"]], data.table(user_login = c("nick1","nick2"), UL_ID = 1:2, key = "user_login"), info = "expected IDs produced, im1 1st use")
+    # 2
+    data <- im2$use(data = data.table(user_login = c("nick5","nick6")),
+                    mne = "UL")
+    expect_identical(names(data), c("user_login","UL_ID"), info = "result of IM$use produce expected columns, im2 st use")
+    expect_equal(im2$ID[["UL"]], data.table(user_login = c("nick5","nick6"), UL_ID = 1:2, key = "user_login"), info = "expected IDs produced, im2 1st use")
+
+    ## second use - data evolution
+    # 1
+    data <- im1$use(data = data.table(user_login = c("nick1","nick3")),
+                    mne = "UL")
+    expect_identical(names(data), c("user_login","UL_ID"), info = "result of IM$use produce expected columns, im1 2nd use")
+    expect_equal(im1$ID[["UL"]], data.table(user_login = paste0(c("nick"),1:3), UL_ID = 1:3, key = "user_login"), info = "expected IDs produced, im1 2nd use")
+    # 2
+    data <- im2$use(data = data.table(user_login = c("nick5","nick9")),
+                    mne = "UL")
+    expect_identical(names(data), c("user_login","UL_ID"), info = "result of IM$use produce expected columns, im1 2nd use")
+    expect_equal(im2$ID[["UL"]], data.table(user_login = paste0(c("nick"),c(5:6,9)), UL_ID = 1:3, key = "user_login"), info = "expected IDs produced, im2 2nd use")
+
+    ## third use - model evolution
+    # 1
+    im1$create(mne = "CU", nk = "currency_code")
+    data <- im1$use(data = tmp_dt <- data.table(client = 1:3, currency_code = c("GBP","BTC","BTC"), value = rnorm(3)),
+                    mne = "CU")
+    expect_identical(names(data), c(names(tmp_dt), "CU_ID"), info = "result of IM$use produce expected columns, im1 3nd use")
+    expect_equal(im1$ID[["CU"]], data.table(currency_code = c("GBP","BTC"), CU_ID = 1:2, key = "currency_code"), info = "expected IDs produced, im1 3nd use")
+    # 2
+    im2$create(mne = "CU", nk = "currency_code")
+    data <- im2$use(data = tmp_dt <- data.table(client = 2:4, currency_code = c("GBP","GBP","BTC"), value = rnorm(3)),
+                    mne = "CU")
+    expect_identical(names(data), c(names(tmp_dt), "CU_ID"), info = "result of IM$use produce expected columns, im2 3nd use")
+    expect_equal(im2$ID[["CU"]], data.table(currency_code = c("GBP","BTC"), CU_ID = 1:2, key = "currency_code"), info = "expected IDs produced, im2 3nd use")
+
+})
