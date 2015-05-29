@@ -1,6 +1,6 @@
-context("AM loading method")
+context("AM load method")
 
-test_that("AM loading method valid processing scenarios", {
+test_that("AM load method valid processing scenarios", {
 
     am <- AM$new()
     am$create(class = "anchor", mne = "PR", desc = "Program")
@@ -32,7 +32,7 @@ test_that("AM loading method valid processing scenarios", {
     # expect_identical(am$process()$rows, rep(2L,2L), info = "static attribute update, new row not inserted  with update not inserts")
 
     # expect_true("my another program new" %in% am$data[code == "PR_NAM", obj[[1L]]]$data$PR_NAM_Program_Name, info = "static attribute update")
-    # TO DO add warning and rejects log to AM ?
+
     # expect_equal(am$IM()$ID$PR, data.table(code = c(1L,50L), PR_ID = 1:2, key = "code"), info = "auto IM after first bad insert")
 
     # metadata
