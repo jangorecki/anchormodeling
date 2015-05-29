@@ -1,6 +1,6 @@
 context("AM load method")
 
-test_that("AM load method valid processing scenarios", {
+test_that("AM load method valid processing non-hist scenarios", {
 
     am <- AM$new()
     am$create(class = "anchor", mne = "PR", desc = "Program")
@@ -19,58 +19,48 @@ test_that("AM load method valid processing scenarios", {
             meta = 2L)
     expect_identical(am$process()$rows, rep(2L,2L), info = "loaded second row")
     expect_equal(am$IM()$ID$PR, data.table(code = c(1L,50L), PR_ID = 1:2, key = "code"), info = "auto IM after second insert")
-    # incremental loading existing data
+    # incremental loading existing data - restatement
     am$load(mapping = list(PR = list("code", NAM = "name")),
             data = data.table(code = 50L, name = "my another program"),
             meta = 3L)
     expect_identical(am$process()$rows, rep(2L,2L), info = "loaded second row twice")
     expect_equal(am$IM()$ID$PR, data.table(code = c(1L,50L), PR_ID = 1:2, key = "code"), info = "auto IM after second insert twice")
-    # incremental loading update static attribute
-    am$load(mapping = list(PR = list("code", NAM = "name")),
-            data = data.table(code = 50L, name = "my another program new"),
-            meta = 4L)
-    # expect_identical(am$process()$rows, rep(2L,2L), info = "static attribute update, new row not inserted  with update not inserts")
 
-    # expect_true("my another program new" %in% am$data[code == "PR_NAM", obj[[1L]]]$data$PR_NAM_Program_Name, info = "static attribute update")
+    # TO DO
 
-    # expect_equal(am$IM()$ID$PR, data.table(code = c(1L,50L), PR_ID = 1:2, key = "code"), info = "auto IM after first bad insert")
+    # evolve model 1
+    am$create(class = "anchor", mne = "PE", desc = "Performance")
+    am$create(class = "tie", anchors = c("PE","PR"), roles = c("at","wasPlayed"), identifier = c(1,Inf))
+    am$run()
 
-    # metadata
+    # evolve model 2
+    am$create(class = "anchor", mne = "AC", desc = "Actor")
+    am$create(class = "attribute", anchor = "AC", mne = "GEN", desc = "Gender", knot = "GEN")
+    am$create(class = "knot", mne = "GEN", desc = "Gender")
+    am$create(class = "tie", anchors = c("AC","PE"), roles = c("wasCasted","in"), identifier = c(Inf,Inf))
+    am$run()
 
+})
 
-    #     am$create(class = "tie", anchors = c("AC","PR"), roles = c("part","in"), identifier = c(Inf,Inf,1), knot = "RAT")
-    #     am$create(class = "anchor", mne = "AC", desc = "Actor")
-    #
-    #
-    #
-    #     am$create(class = "attribute", anchor = "AC", mne = "NAM", desc = "Name", hist = TRUE)
-    #
-    #
-    #     am$create(class = "attribute", anchor = "AC", mne = "GEN", desc = "Gender", knot = "GEN")
-    #     am$create(class = "knot", mne = "GEN", desc = "Gender")
-    #     am$run()
+test_that("AM load method valid processing hist scenarios", {
 
-    # mapping
-    #     mapping <- list(AC = list("code",
-    #                               NAM = c("name", hist = "date"),
-    #                               GEN = "gender"))
-    #
-    #     # using IM
-    #     r <- list()
-    #     r[[1L]] <- list(code = "1", name = "Mike", gender = "M", date = Sys.Date()-5L)
-    #     r[[2L]] <- list("2", "Bob", "M", date = Sys.Date()-5L)
-    #     data <- rbindlist(r)
-    #     am$load(mapping, data, 1L)
-    # check loaded
-    # expect_equal(am$process()[rows >= 2L, code], c("AC_NAM","AC_GEN","AC","GEN"), info = "expected am$process logs loaded")
-    # TO DO - LOAD KNOTS
-    # expect_equal(am$process()[rows >= 2L, sapply(obj, function(obj) nrow(obj$data)==2L)], rep(TRUE, 3), info = "all of the loaded tables has nrow==2L")
-    # load update
-    # data <- data.table(code = "1", name = "Mikey", gender = "M", date = Sys.Date()-4L)
-    # am$load(mapping, data, 2L)
-    #     am$create(class = "anchor", mne = "PE", desc = "Performance")
-    #     am$create(class = "tie", anchors = c("AC","PE"), roles = c("wasCasted","in"), identifier = c(Inf,Inf))
-    #     am$create(class = "knot", mne = "RAT", desc = "Rating")
+    am <- AM$new()
+    am$create(class = "anchor", mne = "AC", desc = "Actor")
+    am$create(class = "attribute", anchor = "AC", mne = "NAM", desc = "Name", hist = TRUE)
+    am$run()
+    mapping <- list(AC = list("code",
+                              NAM = c("name", hist = "date"),
+                              GEN = "gender"))
+
+    # TO DO
+
+    # evolve
+    am$create(class = "anchor", mne = "PR", desc = "Program")
+    am$create(class = "tie", anchors = c("AC","PR"), roles = c("part","in"), identifier = c(Inf,Inf,1), knot = "RAT")
+    am$create(class = "knot", mne = "RAT", desc = "Rating")
+    am$run()
+
+    expect_true(TRUE, info = "dummy")
 
 })
 
@@ -99,7 +89,7 @@ test_that("multiple AM instances loading including separation of IM instances", 
 
 })
 
-test_that("AM loading method exception scenarios", {
+test_that("AM loading method technical exception scenarios", {
 
     # lack of hist
     # lack of knot
@@ -111,5 +101,24 @@ test_that("AM loading method exception scenarios", {
     # knot invalid data type
     # anchor invalid data type (non-list)
     # check against defined naming convention for AM instance
+
+})
+
+test_that("AM loading method data exception scenarios", {
+
+    am <- AM$new()
+    am$create(class = "anchor", mne = "PR", desc = "Program")
+    am$create(class = "attribute", anchor = "PR", mne = "NAM", desc = "Name")
+    am$run()
+
+    # incremental loading new version of static attribute - ERROR
+    am$load(mapping = list(PR = list("code", NAM = "name")),
+            data = data.table(code = 50L, name = "my program"),
+            meta = 1L)
+    # TO DO - should make error
+    #     expect_error(am$load(mapping = list(PR = list("code", NAM = "name")),
+    #                          data = data.table(code = 50L, name = "my program new name"),
+    #                          meta = 2L),
+    #                  "", info = "incremental loading new version of static attribute should produce ERROR")
 
 })
