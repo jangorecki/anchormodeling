@@ -51,17 +51,25 @@ AMobj <- R6Class(
                                                                   load_time = if(requireNamespace("microbenchmark", quietly=TRUE)) (microbenchmark::get_nanotime() - ts) * 1e-9 else proc.time()[[3L]] - ts)))
                 returns(invisible(self))
             }
-            data <- copy(unique(data))[, c(self$cols[length(self$cols)]) := meta[["meta"]]]
+            data <- unique(data)[, c(self$cols[length(self$cols)]) := meta[["meta"]]]
             unq_nrow <- nrow(data)
             setkeyv(data, self$keys)
             # check if first time used
             if(self$nrow() > 0){
                 # check data types
                 stopifnot(identical(self$types(), sapply(data, class1)))
+                # check if no violation of PK and values for static attribute/tie
+                if(identical(self$hist,FALSE)){ # can be TRUE only for attrs or ties
+                    value_col <- self$cols[!self$cols %chin% self$keys][1L]
+                    bad_idx <- self$query()[data, which(eval(call("!=",as.name(value_col),as.name(paste0("i.",value_col)))))]
+                    if(length(bad_idx)){
+                        stop(paste0("Duplicate key violates defined model. You are trying to insert different value into ",value_col," for same existing identity. If you want want to have multiple values for that identity you should historize that ",class1(self),"."))
+                    }
+                }
                 # filter out exactly same rows by ID and hist
                 data <- data[!self$query()]
                 # restatement check and idempotency
-                if(identical(self$rest,FALSE)){
+                if(isTRUE(self$hist) && identical(self$rest,FALSE)){
                     # TO DO
                     browser()
                     # substitute()

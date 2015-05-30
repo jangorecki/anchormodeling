@@ -52,6 +52,8 @@ test_that("AM load method valid processing hist scenarios", {
                               NAM = c("name", hist = "date"),
                               GEN = "gender"))
 
+    # restatment
+
     # TO DO
 
     # evolve
@@ -115,10 +117,10 @@ test_that("AM loading method data exception scenarios", {
     am$load(mapping = list(PR = list("code", NAM = "name")),
             data = data.table(code = 50L, name = "my program"),
             meta = 1L)
-    # TO DO - should make error
-    #     expect_error(am$load(mapping = list(PR = list("code", NAM = "name")),
-    #                          data = data.table(code = 50L, name = "my program new name"),
-    #                          meta = 2L),
-    #                  "", info = "incremental loading new version of static attribute should produce ERROR")
+    expect_error(am$load(mapping = list(PR = list("code", NAM = "name")),
+                         data = data.table(code = 50L, name = "my program new name"),
+                         meta = 2L),
+                 "Duplicate key violates defined model. You are trying to insert different value into PR_NAM_Program_Name for same existing identity. If you want want to have multiple values for that identity you should historize that attribute.",
+                 info = "incremental loading new version of static attribute should produce ERROR")
 
 })

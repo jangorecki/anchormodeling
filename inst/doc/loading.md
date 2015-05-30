@@ -38,7 +38,7 @@
   - [x] AMobj$load
     - [x] validate nrow
     - [x] data types validation - except first load
-    - [ ] PK and new data value violation for static attributes
+    - [x] PK and new data value violation for static attributes
     - [ ] restatement + idempotency
     - [x] append log
   - [x] AMobj$insert
