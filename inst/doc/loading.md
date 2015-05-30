@@ -32,16 +32,18 @@
     - [x] child classes related validation
     - [x] call $load.AMobj just with a subset of cols
     - [x] rename *src cols* to *tbl cols*
-  - [x] AMobj$load
-    - [x] validate nrow
-    - [x] data types validation - except first load
     - [x] add metadata id
     - [x] add metadata src + auto (using deparse-substitute on dataset variable name)
     - [x] add metadata user + auto
-    - [x] restatement + idempotency
+  - [x] AMobj$load
+    - [x] validate nrow
+    - [x] data types validation - except first load
+    - [ ] PK and new data value violation for static attributes
+    - [ ] restatement + idempotency
     - [x] append log
   - [x] AMobj$insert
     - [x] rbindlist
     - [x] resetkey
 - [ ] rollback based on metadata ID delete from all
+  - [ ] new method for delete data by meta id from all tables
 - [ ] create indexes after insert
