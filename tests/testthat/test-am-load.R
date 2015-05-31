@@ -19,7 +19,7 @@ test_that("AM load method valid processing non-hist scenarios", {
             meta = 2L)
     expect_identical(am$process()$rows, rep(2L,2L), info = "loaded second row")
     expect_equal(am$IM()$ID$PR, data.table(code = c(1L,50L), PR_ID = 1:2, key = "code"), info = "auto IM after second insert")
-    # incremental loading existing data - restatement
+    # incremental loading same existing non historized data - should not be loaded
     am$load(mapping = list(PR = list("code", NAM = "name")),
             data = data.table(code = 50L, name = "my another program"),
             meta = 3L)
@@ -48,9 +48,28 @@ test_that("AM load method valid processing hist scenarios", {
     am$create(class = "anchor", mne = "AC", desc = "Actor")
     am$create(class = "attribute", anchor = "AC", mne = "NAM", desc = "Name", hist = TRUE)
     am$run()
-    mapping <- list(AC = list("code",
-                              NAM = c("name", hist = "date"),
-                              GEN = "gender"))
+
+    # initial loading hits data
+    am$load(mapping = list(AC = list("code", NAM = c("name", hist = "date"))),
+            data = data.table(code = 1L, name = "Mike", date = as.Date("2015-01-01")),
+            meta = 1L)
+    expect_identical(am$process()$rows, rep(1L,2L), info = "loaded first hist row")
+    # incremental loading new hist data
+    am$load(mapping = list(AC = list("code", NAM = c("name", hist = "date"))),
+            data = data.table(code = 1L, name = "Mikey", date = as.Date("2015-01-05")),
+            meta = 2L)
+    expect_equal(am$process()[order(class), .(rows, in_nrow, unq_nrow, load_nrow)], data.table(rows = 1:2, in_nrow = c(1L,1L), unq_nrow = c(1L,1L), load_nrow = c(0L,1L)), info = "loaded second hist row")
+    # incremental loading same existing historized data - should not be loaded, but no error
+    am$load(mapping = list(AC = list("code", NAM = c("name", hist = "date"))),
+            data = data.table(code = 1L, name = "Mikey", date = as.Date("2015-01-05")),
+            meta = 3L)
+    expect_equal(am$OBJ("AC_NAM")$data,
+                 data.table(AC_NAM_AC_ID = rep(1L,2),
+                            AC_NAM_Actor_Name = c("Mike","Mikey"),
+                            AC_NAM_ChangedAt = c(as.Date("2015-01-01"), as.Date("2015-01-05")),
+                            Metadata_AC_NAM = 1:2,
+                            key = c("AC_NAM_AC_ID","AC_NAM_ChangedAt")),
+                 info = "historized duplicates on PK silently ignored")
 
     # restatment
 

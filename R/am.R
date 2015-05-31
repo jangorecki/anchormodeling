@@ -174,8 +174,11 @@ AM <- R6Class(
             setkeyv(mapping_attrs_dt, c("class","anchor","mne","hist"))
             # first pass loop checks on composite key join
             mapping_attrs_dt[ eval(model_attrs_lkp), `:=`(code = i.code)]
+            if(!"code" %chin% names(mapping_attrs_dt)){
+                mapping_attrs_dt[, `:=`(code = NA_character_)]
+            } # workaround for data.table#1166
             if(any(is.na(mapping_attrs_dt$code))){
-                stop(paste0("Some of the provided attributes have incorrect definition versus model: ", paste(mapping_attrs_dt[is.na(code), paste(anchor, mne, sep="_")], collapse=", "),". Check if they are not missing `hist` when defined."))
+                stop(paste0("Some of the provided attributes have incorrect definition versus model: ", paste(mapping_attrs_dt[is.na(code), paste(anchor, mne, sep="_")], collapse=", "),". Check if they are not missing `hist` column when defined in model as historized."))
             } # all provided attributes in the mapping exists in model for those anchors, with expected hist and knot
             if(use.im){
                 data <- self$im$use(data, mne = mapping_attrs_dt[, unique(na.omit(c(anchor, knot)))], nk = lapply(mapping, `[[`, 1L), in.place = FALSE)
