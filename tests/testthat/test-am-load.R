@@ -33,6 +33,10 @@ test_that("AM load method valid processing non-hist scenarios", {
     am$create(class = "tie", anchors = c("PE","PR"), roles = c("at","wasPlayed"), identifier = c(1,Inf))
     am$run()
 
+    #     am$load(mapping = list(PE = list("perf_code")),
+    #             data = data.table(perf_code = 1L, prog_code = c(1L,50L)),
+    #             meta = 4L)
+
     # evolve model 2
     am$create(class = "anchor", mne = "AC", desc = "Actor")
     am$create(class = "attribute", anchor = "AC", mne = "GEN", desc = "Gender", knot = "GEN")
@@ -112,6 +116,13 @@ test_that("multiple AM instances loading including separation of IM instances", 
 
 test_that("AM loading method technical exception scenarios", {
 
+    # loading only anchor
+    am <- AM$new()
+    am$create(class = "anchor", mne = "AC", desc = "Actor")
+    am$run()
+#     am$load(mapping = list(AC = list("code")),
+#             data = data.table(code = 1L),
+#             meta = 1L)
     # lack of hist
     # lack of knot
     # misspelled col name

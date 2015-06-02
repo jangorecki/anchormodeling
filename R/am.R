@@ -102,6 +102,7 @@ AM <- R6Class(
             set2keyv(self$data, "class")[]
             if(!self$data[, length(code) == uniqueN(code)]) stop("Codes are not unique.")
             if(!self$data[, length(name) == uniqueN(name)]) stop("Names are not unique.")
+            if(self$data[class=="anchor", .N] == 0L) stop("At least one anchor must be defined")
             if(!all(self$data[class=="attribute", unique(unlist(lapply(obj, function(obj) obj[["anchor"]])))] %chin% self$data[class=="anchor", mne])) stop("Each attribute must be linked to existing anchor.")
             if(!all(self$data[class=="tie", unique(unlist(lapply(obj, function(obj) obj[["anchors"]])))] %chin% self$data[class=="anchor", mne])) stop("Each tie must be linked to existing anchors.")
             if(!all(self$data[class=="attribute", unique(unlist(lapply(obj, function(obj) obj[["knot"]])))] %chin% self$data[class=="knot", mne])) stop("Each knotted attribute must be linked to existing knot.")
@@ -123,7 +124,11 @@ AM <- R6Class(
             self$data[class=="attribute", anchor := sapply(obj, function(obj) as.character(obj$anchor))]
             self$data[class=="tie", `:=`(anchors = lapply(obj, function(obj) c(obj$anchors)))]
             self$data[class=="attribute", parents := lapply(obj, function(obj) c(as.character(obj$knot), as.character(obj$anchor)))]
-            self$data[self$read(class="attribute")[,.(childs = list(code)),,anchor], childs := list(i.childs), by = .EACHI]
+            if(self$data[class=="attribute",.N > 0L]){
+                self$data[self$read(class="attribute")[,.(childs = list(code)),,anchor], childs := list(i.childs), by = .EACHI]
+            } else {
+                self$data[, childs := list(lapply(code, as.null)), by = code]
+            }
             private$instance_run <- TRUE
             private$log_list <- c(private$log_list, list(list(event = "start AM instance", obj = NA_character_, timestamp = Sys.time())))
             invisible(self)
