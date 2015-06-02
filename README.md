@@ -3,7 +3,7 @@
 **Current version:** [0.3.8](NEWS.md)  
 
 - [x] Anchor Model metadata manager.  
-- [x] Export model to XML loadable in [Anchor Modeler](roenbaeck.github.io/anchor/).
+- [x] Export model to XML loadable in [Anchor Modeler](https://roenbaeck.github.io/anchor/).
 - [x] In-memory AM Data Warehouse instances.
 - [x] Built-in Identity Management to generate surrogate keys.
 - [x] High performance engine thanks to [data.table](https://github.com/Rdatatable/data.table/wiki).
