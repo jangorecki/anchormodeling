@@ -94,6 +94,15 @@ mapping <- list(anchor1_mne = list(natural_key_column_names,
                                    attr3_mne = c(column_name, "hist" = historize_column_name, "knot" = knot_mne)))
 ```
 
+Simplifying using `A()` for anchors and `a()` for attributes.
+
+```r
+mapping <- list(Amne = A(natural_key_column_names,
+                         attr_mne = a(column_name, hist = "historize_column_name", knot = "knot_mne"),
+                         ...),
+                ...)
+```
+
 On our simple git repo data model.
 
 ```{r mapping}

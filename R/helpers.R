@@ -81,3 +81,46 @@ exclude.first <- function(x){
 
 now <- function(class = "POSIXct") switch(class, "POSIXct" = Sys.time(), "Date" = Sys.Date())
 
+
+# mapping -----------------------------------------------------------------
+
+a <- function(src, knot, hist){
+    stopifnot(is.character(src))
+    if(!missing(knot) & !missing(hist)){
+        l <- list(src = src, knot = knot, hist = hist)
+    } else if(missing(knot) & !missing(hist)){
+        l <- list(src = src, hist = hist)
+    } else if(!missing(knot) & missing(hist)){
+        l <- list(src = src, knot = knot)
+    } else if(missing(knot) & missing(hist)){
+        l <- list(src = src)
+    } else {
+        stop("invalid knot, hist inputs")
+    }
+    l
+}
+A <- function(nk, ...){
+    dots <- list(...)
+    stopifnot(is.character(nk))
+    c(list(nk = nk), dots)
+}
+
+A.dt <- function(Aname, x){
+    anames <- names(x[[Aname]])
+    if(is.null(anames)){
+        data.table(class = character(), anchor = character(), mne = character(), src_col = character(), hist = logical(), knot = character(), hist_col = character())
+    } else {
+        data.table(class = "attribute", anchor = Aname, rbindlist(lapply(anames[-1L], a.dt, x = x[[Aname]])))
+    }
+}
+a.dt <- function(aname, x){
+    if(is.null(aname)) aname <- "src"
+    data.table(
+        mne = aname,
+        src_col = as.character(x[[aname]][[1L]])[1L],
+        hist = !is.na(as.character(x[[aname]][["hist"]])[1L]),
+        knot = as.character(as.list(x[[aname]])[["knot"]])[1L],
+        hist_col = as.character(as.list(x[[aname]])[["hist"]])[1L]
+    )
+}
+

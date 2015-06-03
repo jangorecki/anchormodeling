@@ -73,6 +73,7 @@ AM <- R6Class(
             if(missing(code) && missing(class)) self$data[TRUE]
             else if(!missing(code) && missing(class)){
                 cd <- code; rm(code)
+                if(is.null(cd)) cd <- FALSE
                 self$data[eval(cd), verbose = getOption("am.key.verbose")] # key
             }
             else if(missing(code) && !missing(class)){
@@ -127,7 +128,8 @@ AM <- R6Class(
             if(self$data[class=="attribute",.N > 0L]){
                 self$data[self$read(class="attribute")[,.(childs = list(code)),,anchor], childs := list(i.childs), by = .EACHI]
             } else {
-                self$data[, childs := list(lapply(code, as.null)), by = code]
+                self$data[, childs := list(lapply(code, as.null))]
+                if(!"anchor" %in% names(self$data)) self$data[, anchor := NA_character_] # workaround for data.table#1166
             }
             private$instance_run <- TRUE
             private$log_list <- c(private$log_list, list(list(event = "start AM instance", obj = NA_character_, timestamp = Sys.time())))
@@ -157,25 +159,7 @@ AM <- R6Class(
             # key by hist and knot only for batch attributes match to model, by defined hist, knot, mne, anchor
             model_attrs_lkp <- quote(self$read(unique(unlist(model_all_attr_codes_for_anchors)))[, .(code),, .(class, anchor, mne, hist)])
             # transform mapping to data.table
-            mapping_attrs_dt <- tryCatch(
-                rbindlist(lapply(names(mapping),
-                                 function(Aname) data.table(
-                                     class = "attribute",
-                                     anchor = Aname,
-                                     rbindlist(lapply(names(mapping[[Aname]])[names(mapping[[Aname]]) != ""], # exclude anchor NK
-                                                      function(aname) data.table(
-                                                          mne = aname,
-                                                          src_col = sapply(aname, function(anm) mapping[[Aname]][[anm]][1L]),
-                                                          hist = sapply(aname, function(anm) !is.na(as.character(as.list(mapping[[Aname]][[anm]])[["hist"]])[1L])),
-                                                          knot = sapply(aname, function(anm) as.character(as.list(mapping[[Aname]][[anm]])[["knot"]])[1L]),
-                                                          hist_col = sapply(aname, function(anm) as.character(as.list(mapping[[Aname]][[anm]])[["hist"]])[1L])
-                                                      )
-                                     ))
-                                 )
-                )),
-                warning = function(w) stop("Invalid mapping definition, see examples how to define mapping"),
-                error = function(e) stop("Invalid mapping definition, see examples how to define mapping")
-            )
+            mapping_attrs_dt <- rbindlist(lapply(selfNames(names(mapping)), A.dt, mapping))
             setkeyv(mapping_attrs_dt, c("class","anchor","mne","hist"))
             # first pass loop checks on composite key join
             mapping_attrs_dt[ eval(model_attrs_lkp), `:=`(code = i.code)]
@@ -185,6 +169,10 @@ AM <- R6Class(
             if(any(is.na(mapping_attrs_dt$code))){
                 stop(paste0("Some of the provided attributes have incorrect definition versus model: ", paste(mapping_attrs_dt[is.na(code), paste(anchor, mne, sep="_")], collapse=", "),". Check if they are not missing `hist` column when defined in model as historized."))
             } # all provided attributes in the mapping exists in model for those anchors, with expected hist and knot
+            if(nrow(mapping_attrs_dt) < 1L){
+                stop("Loading only anchor but no attributes not currently supported.")
+                # it is working up to this place in code
+            }
             if(use.im){
                 data <- self$im$use(data, mne = mapping_attrs_dt[, unique(na.omit(c(anchor, knot)))], nk = lapply(mapping, `[[`, 1L), in.place = FALSE)
             } # auto Identity Management: anchors and knots get ID in incoming data and in am$IM() but not yet in obj$data
