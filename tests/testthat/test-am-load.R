@@ -116,15 +116,14 @@ test_that("multiple AM instances loading including separation of IM instances", 
 
 test_that("AM loading method technical exception scenarios", {
 
-    # loading ONLY anchor - not currently supported
+    # loading only anchor - no attributes etc
     am <- AM$new()
     am$create(class = "anchor", mne = "AC", desc = "Actor")
     am$run()
-    expect_error(am$load(mapping = list(AC = list("code")),
-                         data = data.table(code = 1L),
-                         meta = 1L),
-                 "Loading only anchor but no attributes not currently supported.",
-                 info = "Loading only anchor but no attributes not currently supported.")
+    am$load(mapping = list(AC = list("code")),
+            data = data.table(code = 1L),
+            meta = 1L)
+    expect_equal(am$OBJ("AC")$data, data.table(AC_ID = 1L, Metadata_AC = 1L, key ="AC_ID"), info = "loading of anchor only")
     # lack of hist
     # lack of knot
     # misspelled col name

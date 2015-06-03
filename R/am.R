@@ -146,20 +146,21 @@ AM <- R6Class(
                 all(names(mapping) %chin% self$data$mne), # exists in defined AM
                 length(names(data))==uniqueN(names(data)) # no duplicate names in `data` allowed
             )
-            if(!all(names(mapping) %chin% self$read(class = c("anchor"))$mne)){
-                stop(paste0("In the mapping definition names should be mne of anchors, related to: ", paste(names(mapping)[names(mapping) %chin% self$read(class = c("anchor"))], collapse=", ")))
+            anchors_mne <- names(mapping)
+            if(!all(anchors_mne %chin% self$read(class = c("anchor"))$mne)){
+                stop(paste0("In the mapping definition names should be mne of anchors, related to: ", paste(anchors_mne[anchors_mne %chin% self$read(class = c("anchor"))], collapse=", ")))
             } # nodes in mapping only anchors, handle: add tie, attributes nested, knots autoloaded, maybe tie autoloading too?
             if(!all(unlist(mapping) %chin% names(data))){
                 stop(paste0("Following defined columns do not exists in source data: ",paste(unlist(mapping)[!unlist(mapping) %chin% names(data)],collapse=", ")))
             } # all leafs of mapping should be src col names and exists in data
             if(!all(sapply(mapping, function(x, data.names) all(sapply(x, valid_entity_params, data.names)), data.names = names(data)))){
-               stop(paste0("Invalid entity params provided"))
+                stop(paste0("Invalid entity params provided"))
             } # src columns "" / NULL exists in data to load # apply over elements in the mapping and then over names of each attribute definition
-            model_all_attr_codes_for_anchors <- setNames(self$read(names(mapping))$childs, names(mapping))
+            model_all_attr_codes_for_anchors <- setNames(self$read(anchors_mne)$childs, anchors_mne)
             # key by hist and knot only for batch attributes match to model, by defined hist, knot, mne, anchor
             model_attrs_lkp <- quote(self$read(unique(unlist(model_all_attr_codes_for_anchors)))[, .(code),, .(class, anchor, mne, hist)])
             # transform mapping to data.table
-            mapping_attrs_dt <- rbindlist(lapply(selfNames(names(mapping)), A.dt, mapping))
+            mapping_attrs_dt <- rbindlist(lapply(anchors_mne, A.dt, mapping))
             setkeyv(mapping_attrs_dt, c("class","anchor","mne","hist"))
             # first pass loop checks on composite key join
             mapping_attrs_dt[ eval(model_attrs_lkp), `:=`(code = i.code)]
@@ -169,20 +170,17 @@ AM <- R6Class(
             if(any(is.na(mapping_attrs_dt$code))){
                 stop(paste0("Some of the provided attributes have incorrect definition versus model: ", paste(mapping_attrs_dt[is.na(code), paste(anchor, mne, sep="_")], collapse=", "),". Check if they are not missing `hist` column when defined in model as historized."))
             } # all provided attributes in the mapping exists in model for those anchors, with expected hist and knot
-            if(nrow(mapping_attrs_dt) < 1L){
-                stop("Loading only anchor but no attributes not currently supported.")
-                # it is working up to this place in code
-            }
             if(use.im){
-                data <- self$im$use(data, mne = mapping_attrs_dt[, unique(na.omit(c(anchor, knot)))], nk = lapply(mapping, `[[`, 1L), in.place = FALSE)
+                mnes_to_im <- unique(c(anchors_mne, mapping_attrs_dt[, unique(na.omit(c(anchor, knot)))])) # handled loading of anchors only without any attributes
+                data <- self$im$use(data, mne = mnes_to_im, nk = lapply(mapping, `[[`, 1L), in.place = FALSE)
             } # auto Identity Management: anchors and knots get ID in incoming data and in am$IM() but not yet in obj$data
             # prepare sequence of processing
-            load_seq <- setkeyv(rbindlist(
-                list(
-                    mapping_attrs_dt[, .(class = "anchor", mne = anchor, code = anchor, hist = FALSE, knot = NA_character_, src_col = paste_(anchor,"ID"), hist_col = NA_character_), .(anchor)],
-                    mapping_attrs_dt[!is.na(knot), .(class = "knot", anchor = NA_character_, mne = knot, code = knot, hist = FALSE, knot = NA_character_, src_col = NA_character_, hist_col = NA_character_), .(byknot = knot)][, .SD, .SDcols=-"byknot"],
-                    mapping_attrs_dt[, .(anchor, class = "attribute", mne, code, hist, knot, src_col = src_col, hist_col = hist_col)]
-                )), c("class","anchor"))
+            load_seq <- rbindlist(list(
+                data.table(anchor = NA_character_, class = "anchor", mne = anchors_mne, code = anchors_mne, hist = FALSE, knot = NA_character_, src_col = paste(anchors_mne,"ID",sep="_"), hist_col = NA_character_),
+                mapping_attrs_dt[!is.na(knot), .(anchor = NA_character_, class = "knot", mne = knot, code = knot, hist = FALSE, knot = NA_character_, src_col = NA_character_, hist_col = NA_character_), .(byknot = knot)][, .SD, .SDcols=-"byknot"],
+                mapping_attrs_dt[, .(anchor, class = rep("attribute",length(mne)), mne, code, hist, knot, src_col, hist_col)]
+            ))
+            setkeyv(load_seq, c("class","anchor"))
             set2keyv(load_seq, "code")
             # first pass loop, only check if mapping matches, fill defaults, etc. ?
             if(is.integer(meta) || is.numeric(meta)){
@@ -271,7 +269,7 @@ AM <- R6Class(
             if(mne %chin% self$read(class="tie")$mne) return(self$OBJ(mne)$query(type = type, timepoint = timepoint)) # TO DO knot lookup and filterNA?
             # denormalize to 3NF
             childs <- self$read(mne)$childs[[1L]]
-            if(length(childs)==0L) stop("Anchor has no attributes")
+            if(length(childs)==0L) return(self$OBJ(mne)$query())
             childs.knotted <- self$read(childs)[, code[sapply(knot, isTRUE)]]
             childs.historized <- self$read(childs)[, code[sapply(hist, isTRUE)]]
             filterNA <- function(x, cols){
