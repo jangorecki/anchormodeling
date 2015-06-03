@@ -118,7 +118,7 @@ a.dt <- function(aname, x){
     data.table(
         mne = aname,
         src_col = as.character(x[[aname]][[1L]])[1L],
-        hist = !is.na(as.character(x[[aname]][["hist"]])[1L]),
+        hist = !is.na(as.character(as.list(x[[aname]])[["hist"]])[1L]),
         knot = as.character(as.list(x[[aname]])[["knot"]])[1L],
         hist_col = as.character(as.list(x[[aname]])[["hist"]])[1L]
     )
