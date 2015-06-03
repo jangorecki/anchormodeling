@@ -245,8 +245,13 @@ AM <- R6Class(
             )
             # for non-difference view exec main loop with lookups, also difference views where all anchor attributes are non historized
             if(!allow.cartesian){
+                master <- copy(master)
                 for(i in 1:length(join)){
-                    master <- join[[i]][master, allow.cartesian = allow.cartesian][, setnames(.SD,names(join[[i]])[1L],names(master)[1L])]
+                    # faster way thanks to: http://stackoverflow.com/questions/30468455/dynamically-build-call-for-lookup-multiple-columns
+                    lkp_cols <- names(join[[i]])[-1L]
+                    master[join[[i]], c(lkp_cols) := mget(paste0('i.', lkp_cols))]
+                    # old slower:
+                    # master <- join[[i]][master, allow.cartesian = allow.cartesian][, setnames(.SD,names(join[[i]])[1L],names(master)[1L])]
                 }
             }
             # for difference view exec lookup distinct id-time, union and then use as master and rolling to joins
