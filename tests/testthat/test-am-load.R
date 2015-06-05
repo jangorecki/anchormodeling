@@ -137,7 +137,7 @@ test_that("AM loading method technical exception scenarios", {
 
 })
 
-test_that("AM loading method data exception scenarios", {
+test_that("AM loading method data model validation failure", {
 
     am <- AM$new()
     am$create(class = "anchor", mne = "PR", desc = "Program")
@@ -153,5 +153,12 @@ test_that("AM loading method data exception scenarios", {
                          meta = 2L),
                  "Duplicate key violates defined model. You are trying to insert different value into PR_NAM_Program_Name for same existing identity. If you want want to have multiple values for that identity you should historize that attribute.",
                  info = "incremental loading new version of static attribute should produce ERROR")
+    # sql ref:
+    #     -- PR_NAM data model identity violation: static attribute with different value for same identity
+    #     INSERT INTO dbo.lpr_program (pr_id, metadata_pr, pr_nam_pr_id, metadata_pr_nam, pr_nam_program_name) VALUES (1,1,1,1,'My program');
+    #     INSERT INTO dbo.lpr_program (pr_id, metadata_pr, pr_nam_pr_id, metadata_pr_nam, pr_nam_program_name) VALUES (2,2,2,2,'My program2');
+    #     INSERT INTO dbo.lpr_program (pr_id, metadata_pr, pr_nam_pr_id, metadata_pr_nam, pr_nam_program_name) VALUES (1,1,1,1,'My program1');
+    #     --ERROR:  duplicate key value violates unique constraint "pkpr_nam_program_name"
+    #     --DETAIL:  Key (pr_nam_pr_id)=(1) already exists.
 
 })
