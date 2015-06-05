@@ -1,3 +1,7 @@
+
+# class related -----------------------------------------------------------
+
+class1 <- function(x) class(x)[1L]
 is.AM <- function(x) "AM" %chin% class(x)
 is.IM <- function(x) "IM" %chin% class(x)
 is.am <- is.maobj <- function(x) any(c("anchor","attribute","tie","knot") %chin% class(x))
@@ -5,6 +9,8 @@ is.anchor <- function(x) "anchor" %chin% class(x)
 is.attribute <- function(x) "attribute" %chin% class(x)
 is.tie <- function(x) "tie" %chin% class(x)
 is.knot <- function(x) "knot" %chin% class(x)
+
+# various helpers ---------------------------------------------------------
 
 paste_ <- function(..., sep="_", collapse="_") paste(..., sep=sep, collapse=collapse)
 
@@ -27,8 +33,6 @@ am.size.format <-  function(x, units = "auto"){
            "Gb" =, "GB" = paste(round(x/1024^3, 1L), "GB")
     )
 }
-
-class1 <- function(x) class(x)[1L]
 
 valid_entity_params <- function(x, data.names){
     # valid_entity_params
@@ -81,7 +85,6 @@ exclude.first <- function(x){
 
 now <- function(class = "POSIXct") switch(class, "POSIXct" = Sys.time(), "Date" = Sys.Date())
 
-
 # mapping -----------------------------------------------------------------
 
 a <- function(src, knot, hist){
@@ -99,6 +102,7 @@ a <- function(src, knot, hist){
     }
     l
 }
+
 A <- function(nk, ...){
     dots <- list(...)
     stopifnot(is.character(nk))
@@ -113,6 +117,7 @@ A.dt <- function(Aname, x){
         data.table(class = "attribute", anchor = Aname, rbindlist(lapply(anames[-1L], a.dt, x = x[[Aname]])))
     }
 }
+
 a.dt <- function(aname, x){
     if(is.null(aname)) aname <- "src"
     data.table(
@@ -124,3 +129,32 @@ a.dt <- function(aname, x){
     )
 }
 
+# sql related -------------------------------------------------------------
+
+format.postgres.value <- function(x){
+    ifelse(is.null(x),
+           "NULL",
+           ifelse(is.na(x),
+                  "NULL",
+                  ifelse(is.logical(x),
+                         as.character(x),
+                         ifelse(is.numeric(x),
+                                as.character(x),
+                                ifelse(is.character(x),
+                                       paste0("'",x,"'"),
+                                       ifelse(inherits(x, "POSIXt"),
+                                              paste0("'",format(x, "%Y-%m-%d %H:%M:%S"),"'::timestamp"),
+                                              ifelse(inherits(x, "Date"),
+                                                     paste0("'",format(x, "%Y-%m-%d"),"'::date"),
+                                                     {warning(paste("unsupported column of class:", class(x)[1L])); "NULL"})))))))
+}
+
+insert.postgres <- function(x, tbl = "schema.table"){
+    paste(
+        "INSERT INTO",
+        tbl,
+        paste0("(", paste(names(x), collapse=", "), ")"),
+        "VALUES",
+        x[, paste0("(", paste(lapply(.SD, format.postgres.value), collapse=", "), ");"), by = seq_len(nrow(x))]$V1
+    )
+}
