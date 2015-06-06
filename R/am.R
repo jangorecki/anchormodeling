@@ -123,7 +123,11 @@ AM <- R6Class(
             if(length(exist.cols)) self$data[, eval(exist.cols) := NULL]
             # refresh metadata
             self$data[class=="attribute", anchor := sapply(obj, function(obj) as.character(obj$anchor))]
-            self$data[class=="tie", `:=`(anchors = lapply(obj, function(obj) c(obj$anchors)))]
+            if(self$data[class=="tie",.N > 0L]){
+                self$data[class=="tie", `:=`(anchors = lapply(obj, function(obj) c(obj$anchors)))]
+            } else {
+                self$data[, anchors := list(lapply(code, as.null))]
+            }
             self$data[class=="attribute", parents := lapply(obj, function(obj) c(as.character(obj$knot), as.character(obj$anchor)))]
             if(self$data[class=="attribute",.N > 0L]){
                 self$data[self$read(class="attribute")[,.(childs = list(code)),,anchor], childs := list(i.childs), by = .EACHI]
@@ -143,10 +147,32 @@ AM <- R6Class(
                 is.list(mapping),
                 length(mapping)>0L,
                 is.data.table(data),
-                all(names(mapping) %chin% self$data$mne), # exists in defined AM
                 length(names(data))==uniqueN(names(data)) # no duplicate names in `data` allowed
             )
-            anchors_mne <- names(mapping)
+            anchors_mne <- names(mapping)[names(mapping) %chin% self$read(class="anchor")$mne]
+            # tie related handling
+            tie_code <- names(mapping)[names(mapping) %chin% self$read(class="tie")$code]
+            tie_duplicate_short_code <- names(mapping)[
+                names(mapping) %chin%
+                    self$read(class="tie")[, .(N = .N), .(short_code = paste_(c(unlist(anchors), knot)))][N > 1L, short_code]
+                    ]
+            if(length(tie_duplicate_short_code) > 0L){
+                stop(paste0("Non-unique code lookup for short tie code: ",paste(tie_duplicate_short_code, collapse=", "),". Include roles in provided tie entity in defined mapping. Use tie codes from you AM instance."))
+            }
+            tie_map_short_code <- names(mapping)[
+                !names(mapping) %chin%
+                    c(anchors_mne, tie_code)
+                ]
+            tie_mapped <- self$read(class="tie")[,.(code),,.(short_code = paste_(c(unlist(anchors), knot)))][tie_map_short_code, .(code), .EACHI, nomatch=NA_character_]
+            if(tie_mapped[is.na(code), .N > 0L]){
+                stop(paste0("Following short code of tie was not able to map to any tie:",tie_mapped[is.na(code), paste(tie_mapped, short_code=", ")],". See am print method for defined entities and provide tie code."))
+            }
+            names(mapping)[names(mapping) == tie_map_short_code] <- tie_mapped[tie_map_short_code, code] # mapping elements renamed
+            tie_code <- unique(c(tie_code, tie_mapped$code)) # all ties remapped to unique codes
+            # general processing
+            if(length(mapping)!=length(c(anchors_mne, tie_code))){
+                stop("Mapping list definition should contain only anchor memonics or unique codes of ties based on pasted anchors and knot mnes. See AM instance print for defined entities.")
+            }
             if(!all(anchors_mne %chin% self$read(class = c("anchor"))$mne)){
                 stop(paste0("In the mapping definition names should be mne of anchors, related to: ", paste(anchors_mne[anchors_mne %chin% self$read(class = c("anchor"))], collapse=", ")))
             } # nodes in mapping only anchors, handle: add tie, attributes nested, knots autoloaded, maybe tie autoloading too?
@@ -158,33 +184,45 @@ AM <- R6Class(
             } # src columns "" / NULL exists in data to load # apply over elements in the mapping and then over names of each attribute definition
             model_all_attr_codes_for_anchors <- setNames(self$read(anchors_mne)$childs, anchors_mne)
             # key by hist and knot only for batch attributes match to model, by defined hist, knot, mne, anchor
-            model_attrs_lkp <- quote(self$read(unique(unlist(model_all_attr_codes_for_anchors)))[, .(code),, .(class, anchor, mne, hist)])
+            model_attrs_lkp <- quote(self$read(unique(unlist(model_all_attr_codes_for_anchors)))[, .(code, knot),, .(class, anchor, mne, hist)])
             # transform mapping to data.table
             mapping_attrs_dt <- rbindlist(lapply(anchors_mne, A.dt, mapping))
             setkeyv(mapping_attrs_dt, c("class","anchor","mne","hist"))
             # first pass loop checks on composite key join
-            mapping_attrs_dt[ eval(model_attrs_lkp), `:=`(code = i.code)]
+            mapping_attrs_dt[ eval(model_attrs_lkp), `:=`(code = i.code, knot = i.knot)]
             if(!"code" %chin% names(mapping_attrs_dt)){
-                mapping_attrs_dt[, `:=`(code = NA_character_)]
+                mapping_attrs_dt[, `:=`(code = NA_character_, knot = NA_character_)]
             } # workaround for data.table#1166
             if(any(is.na(mapping_attrs_dt$code))){
                 stop(paste0("Some of the provided attributes have incorrect definition versus model: ", paste(mapping_attrs_dt[is.na(code), paste(anchor, mne, sep="_")], collapse=", "),". Check if they are not missing `hist` column when defined in model as historized."))
             } # all provided attributes in the mapping exists in model for those anchors, with expected hist and knot
+            browser()
             if(use.im){
-                mnes_to_im <- unique(c(anchors_mne, mapping_attrs_dt[, unique(na.omit(c(anchor, knot)))])) # handled loading of anchors only without any attributes
+                tie_anchors_mne <- self$read(tie_code)[, unique(unlist(anchors))]
+                attr_knots_mne <- mapping_attrs_dt[!is.na(knot), unique(knot)]
+                tie_knots_mne <- self$read(tie_code)[!is.na(knot), unique(knot)]
+                mnes_to_im <- unique(c(anchors_mne, tie_anchors_mne, attr_knots_mne, tie_knots_mne))
+                anchors_nk <- lapply(mapping, `[[`, 1L)
                 data <- self$im$use(data, mne = mnes_to_im, nk = lapply(mapping, `[[`, 1L), in.place = FALSE)
             } # auto Identity Management: anchors and knots get ID in incoming data and in am$IM() but not yet in obj$data
             # prepare sequence of processing
             load_seq <- rbindlist(list(
-                data.table(anchor = NA_character_, class = "anchor", mne = anchors_mne, code = anchors_mne, hist = FALSE, knot = NA_character_, src_col = paste(anchors_mne,"ID",sep="_"), hist_col = NA_character_),
-                mapping_attrs_dt[!is.na(knot), .(anchor = NA_character_, class = "knot", mne = knot, code = knot, hist = FALSE, knot = NA_character_, src_col = NA_character_, hist_col = NA_character_), .(byknot = knot)][, .SD, .SDcols=-"byknot"],
-                mapping_attrs_dt[, .(anchor, class = rep("attribute",length(mne)), mne, code, hist, knot, src_col, hist_col)]
+                "anchor" = data.table(anchor = NA_character_, class = "anchor", mne = anchors_mne, code = anchors_mne, hist = FALSE, knot = NA_character_, src_col = paste(anchors_mne,"ID",sep="_"), hist_col = NA_character_),
+                "knot" = unique(rbindlist(list(
+                    "knot of attr" = mapping_attrs_dt[!is.na(knot), .(anchor = NA_character_, class = "knot", mne = knot, code = knot, hist = FALSE, knot = NA_character_, src_col = NA_character_, hist_col = NA_character_), .(byknot = knot)][, unique(.SD), .SDcols=-"byknot"],
+                    "knot of tie" = self$read(tie_code)[!is.na(knot), .(anchor = NA_character_, class = "knot", mne = knot, code = knot, hist = FALSE, knot = NA_character_, src_col = NA_character_, hist_col = NA_character_), .(byknot = knot)][, unique(.SD), .SDcols=-"byknot"]
+                ))),
+                "attr" = mapping_attrs_dt[, .(anchor, class = rep("attribute",length(mne)), mne, code, hist, knot, src_col, hist_col)],
+                "tie" = rbindlist(c(
+                    list(data.table(code = character(), src_col = character(), hist = logical(), knot = character(), hist_col = character())),
+                    lapply(tie_code, T.dt, mapping)
+                ))[, .(anchor = rep(NA_character_,length(code)), class = rep("tie",length(code)), mne = rep(NA_character_,length(code)), code, hist, knot, src_col, hist_col)]
             ))
             setkeyv(load_seq, c("class","anchor"))
             set2keyv(load_seq, "code")
             # first pass loop, only check if mapping matches, fill defaults, etc. ?
             if(is.integer(meta) || is.numeric(meta)){
-                meta <- list(meta = meta, user = as.character(Sys.info()[["user"]])[1L], src = paste(deparse(data.sub), collapse="\n")[1L])
+                meta <- list(meta = as.integer(meta), user = as.character(Sys.info()[["user"]])[1L], src = paste(deparse(data.sub), collapse="\n")[1L])
             } else if(is.data.table(meta) || is.list(meta)){
                 if(!"meta" %chin% names(meta)) meta[["meta"]] <- NA_integer_
                 if(!"user" %chin% names(meta)) meta[["user"]] <- as.character(Sys.info()[["user"]])[1L]
@@ -226,6 +264,20 @@ AM <- R6Class(
                     )
                 })
             })
+            # loading ties
+            # browser()
+            #             lapply(load_seq["tie", code, nomatch=0L], function(knot_code){
+            #                 src_cols <- load_seq[c("attribute","tie"), nomatch=0L][knot==knot_code, src_cols]
+            #                 src_cols <- c(paste_(knot_code,"ID"), src_cols)
+            #                 cols <- self$read(knot_code)$obj[[1L]]$cols
+            #                 cols <- cols[-length(cols)] # exclude metadata col
+            #                 value.name <- self$read(knot_code)$name
+            #                 stopifnot(c(src_cols[1L], value.name) == cols)
+            #                 self$data[knot_code, obj][[1L]]$load(
+            #                     data = melt(data[, src_cols, with=FALSE], id.vars = src_cols[1L], measure.vars = src_cols[-1L], value.name = value.name)[, .SD, .SDcols=-"variable"], # support for multi child knots, will load from all src_cols into one
+            #                     meta = meta
+            #                 )
+            #             })
             invisible(self)
         },
         OBJ = function(code) self$read(code)$obj[[1L]],

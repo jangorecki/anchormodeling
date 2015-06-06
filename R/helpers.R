@@ -112,7 +112,7 @@ A <- function(nk, ...){
 A.dt <- function(Aname, x){
     anames <- names(x[[Aname]])
     if(is.null(anames)){
-        data.table(class = character(), anchor = character(), mne = character(), src_col = character(), hist = logical(), knot = character(), hist_col = character())
+        data.table(class = character(), anchor = character(), mne = character(), src_col = character(), hist = logical(), hist_col = character())
     } else {
         data.table(class = "attribute", anchor = Aname, rbindlist(lapply(anames[-1L], a.dt, x = x[[Aname]])))
     }
@@ -124,8 +124,17 @@ a.dt <- function(aname, x){
         mne = aname,
         src_col = as.character(x[[aname]][[1L]])[1L],
         hist = !is.na(as.character(as.list(x[[aname]])[["hist"]])[1L]),
-        knot = as.character(as.list(x[[aname]])[["knot"]])[1L],
         hist_col = as.character(as.list(x[[aname]])[["hist"]])[1L]
+    )
+}
+
+T.dt <- function(Tname, x){
+    data.table(
+        code = Tname,
+        src_col = NA_character_,
+        hist = !is.na(as.character(as.list(x[[Tname]])[["hist"]])[1L]),
+        knot = as.character(as.list(x[[Tname]])[["knot"]])[1L],
+        hist_col = as.character(as.list(x[[Tname]])[["hist"]])[1L]
     )
 }
 

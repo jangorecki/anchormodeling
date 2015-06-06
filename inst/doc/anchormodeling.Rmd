@@ -85,20 +85,22 @@ Each symbol nested in below list substitutes the character scalar provided by us
 mapping <- list(anchor1_mne = list(natural_key_column_names,
                                    attr1_mne = column_name,
                                    attr2_mne = c(column_name, "hist" = historize_column_name),
-                                   attr3_mne = c(column_name, "knot" = knot_mne),
-                                   attr3_mne = c(column_name, "hist" = historize_column_name, "knot" = knot_mne)),
+                                   attr3_mne = column_name,
+                                   attr4_mne = c(column_name, "hist" = historize_column_name)),
                 anchor2_mne = list(natural_key_column_names,
                                    attr1_mne = column_name,
                                    attr2_mne = c(column_name, "hist" = historize_column_name),
-                                   attr3_mne = c(column_name, "knot" = knot_mne),
-                                   attr3_mne = c(column_name, "hist" = historize_column_name, "knot" = knot_mne)))
+                                   attr3_mne = column_name,
+                                   attr4_mne = c(column_name, "hist" = historize_column_name)),
+                tie_mne1_mne2_mne2 = list("knot" = knot_mne,
+                                          "hist" = historize_column_name))
 ```
 
-Simplifying using `A()` for anchors and `a()` for attributes.
+If somebody wants to learn new function function for everything then it can used by `A()` for anchors and `a()` for attributes.  
 
 ```r
 mapping <- list(Amne = A(natural_key_column_names,
-                         attr_mne = a(column_name, hist = "historize_column_name", knot = "knot_mne"),
+                         attr_mne = a(column_name, hist = "historize_column_name"),
                          ...),
                 ...)
 ```
