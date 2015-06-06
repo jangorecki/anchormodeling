@@ -68,12 +68,30 @@ IM <- R6Class(
                     if(!mne %chin% names(nk)) stop(paste0("Each new anchor/knot to be handled by auto identity management should have natural keys provided as nk arg, the list of natural key cols named by mne. Missing natural keys for: ",mne))
                     self$create(mne = mne, nk = nk[[mne]])
                 }
-                # check nk names
-                stopifnot(all(self$NK[[mne]] %chin% names(data)))
+                if(!missing(nk)){
+                    if(!all(nk[[mne]] %chin% names(data))){
+                        stop(paste0("Columns provided to nk doesn't exists in data, related to mne: ",mne))
+                    }
+                    # dynamic rename incoming data
+                    if(!identical(self$NK[[mne]], nk[[mne]])){
+                        if(length(self$NK[[mne]]) != length(nk[[mne]])){
+                            msg <- paste0("Incorrect number of columns provided as natural keys for ",mne,". Defined in model: ", paste(self$NK[[mne]], collapse=", "),". Provided in nk: ", paste(nk[[mne]], collapse=", "),".")
+                            stop(msg)
+                        }
+                        rn_i <- which(self$NK[[mne]] != nk[[mne]])
+                        data[, c(self$NK[[mne]][rn_i]) := mget(nk[[mne]][rn_i])] # copy column to simulate previous name of column
+                    }
+                }
                 init_ID <- length(self$ID[[mne]])==0L # check if first time used
                 if(!init_ID){
+                    # check nk col names
+                    if(!all(self$NK[[mne]] %chin% names(data))){
+                        stop(paste0("Defined natural key for mnemonic ", mne, " do not exists in incoming data. Expected names: " ,paste(self$NK[[mne]], collapse=", "),". To use different column provide `nk` argument, or update data in your IM instance."))
+                    }
                     # check nk data types
-                    stopifnot(identical(sapply(self$ID[[mne]][0L, self$NK[[mne]], with=FALSE], class1),sapply(data[0L, self$NK[[mne]], with=FALSE], class1)))
+                    if(!identical(sapply(self$ID[[mne]][0L, self$NK[[mne]], with=FALSE], class1),sapply(data[0L, self$NK[[mne]], with=FALSE], class1))){
+                        stop(paste0("Provided natural key columns are different type than the one stored in Identity Management. Related to mnemonic: ",mne))
+                    }
                     # keep only new ID
                     new_nk.data <- self$ID[[mne]][data[, unique(.SD), .SDcols=self$NK[[mne]]]][is.na(eval(as.name(paste(mne,"ID",sep="_"))))]
                 } else {

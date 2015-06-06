@@ -32,6 +32,7 @@ test_that("IM process", {
 
 test_that("auto im$create while im$use", {
 
+    # basic scenario
     im <- IM$new()
     im$create(mne = "UL", nk = "user_login")
     data <- im$use(data = data.table(user_login = c("nick1","nick2")),
@@ -40,6 +41,17 @@ test_that("auto im$create while im$use", {
     expect_equal(im$ID[["UL"]], data.table(user_login = c("nick1","nick2"), UL_ID = 1:2, key = "user_login"), info = "expected IDs produced on auto im$create on im$use")
     expect_error(data <- im$use(data = data.table(user_login = c("nick1","nick2"))), "argument \"mne\" is missing, with no default", info = "missing mne in im$use")
     expect_error(data <- im$use(mne = "XX"), "argument \"data\" is missing, with no default", info = "missing data in im$use")
+
+    # incremental: defined nk in IM model not exist in names(data) different - no `nk` provided, error
+    expect_error(data <- im$use(data = data.table(ulogin = c("nick3","nick2")),
+                                mne = "UL"), "Defined natural key for mnemonic UL do not exists in incoming data. Expected names: user_login. To use different column provide `nk` argument, or update data in your IM instance.", info = "expected error on diff name and no `nk` arg")
+
+    # incremental: defined nk in IM model not exist in names(data) different - `nk` argument list of columns to use by mnemonic - dynamic src column names
+    data <- im$use(data = data.table(ulogin = c("nick3","nick2")),
+                   mne = "UL",
+                   nk = list(UL = c("ulogin")))
+    expect_identical(names(data), c("ulogin","user_login","UL_ID"), info = "IM$use auto-create dynamic column rename on new src column, expected cols")
+    expect_true(data[, identical(ulogin,user_login)], info = "copied columns identical")
 
 })
 
