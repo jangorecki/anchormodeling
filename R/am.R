@@ -20,7 +20,7 @@ AM <- R6Class(
             private$naming <- naming
             private$hist_col <- hist_col
             private$log_list <- list(list(event = "initialize AM", obj = NA_character_, timestamp = Sys.time()))
-            self$im <- IM$new()
+            self$im <- IM$new(naming = naming)
             private$instance_run <- FALSE
             private$log_list <- c(private$log_list, list(list(event = "initialize IM", obj = NA_character_, timestamp = Sys.time())))
             invisible(self)

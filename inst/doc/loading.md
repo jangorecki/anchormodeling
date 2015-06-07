@@ -47,3 +47,4 @@
 - [ ] rollback based on metadata ID delete from all
   - [ ] new method for delete data by meta id from all tables
 - [ ] create indexes after insert
+- [ ] shared knots etl: loading, auto-im, view
