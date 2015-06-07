@@ -25,7 +25,7 @@ test_that("AM load - attribute tests", {
     am$load(mapping = list(AC = list("code", NAM = "name", GEN = "gender")),
             data = data.table(code = 1:2, name = c("Bob","Alice"), gender = c("M","F")),
             meta = 3L)
-    expect_equal(am$OBJ("GEN")$data, data.table(GEN_ID = 1:2, GEN_Gender = c("F","M"), Metadata_GEN = 2:3, key = "GEN_ID"), info = "incremental load of static knotted attr as expected")
+    expect_equal(am$OBJ("GEN")$data, data.table(GEN_ID = 1:2, GEN_Gender = c("F","M"), Metadata_GEN = 2:3, key = "GEN_ID"), info = "incremental load, static knotted attr as expected")
 
     # evolve model 2: shared knot of attribute
     am$create(class = "attribute", anchor = "AC", mne = "RAL", desc = "LowerRating", knot = "RAT")
@@ -35,19 +35,65 @@ test_that("AM load - attribute tests", {
     am$load(mapping = list(AC = list("code", RAH = "ratingH", RAL = "ratingL")),
             data = data.table(code = 1:2, ratingH = c("Good","VeryGood"), ratingL = c("Bad","Medicore")),
             meta = 4L)
+    expect_equal(am$process()[code=="RAT", .(meta, in_nrow, unq_nrow, load_nrow)], data.table(meta = 4L, in_nrow = 4L, unq_nrow = 4L, load_nrow = 4L), info = "expected in_nrow, unq_nrow and load_nrow for shared knot of attributes")
     expect_equal(am$OBJ("RAT")$data, data.table(RAT_ID = 1:4, RAT_Rating = c("Good","VeryGood","Bad","Medicore"), Metadata_RAT = rep(4L,4L), key = "RAT_ID"), info = "static shared knot knotted attr as expected")
 
     # incremetal load
     am$load(mapping = list(AC = list("code", RAH = "ratingH", RAL = "ratingL")),
-            data = data.table(code = 3:4, ratingH = c("Good","Great"), ratingL = c("Bad","Medicore")), # one new
+            data = data.table(code = 3:4, ratingH = c("Good","Great"), ratingL = c("Bad","Bad")), # one new, one the same
             meta = 5L)
-    expect_equal(am$OBJ("RAT")$data, data.table(RAT_ID = 1:5, RAT_Rating = c("Good","VeryGood","Bad","Medicore","Great"), Metadata_RAT = c(rep(4L,4L),5L), key = "RAT_ID"), info = "incremental load of static shared knot knotted attr as expected")
+    expect_equal(am$process()[code=="RAT", .(meta, in_nrow, unq_nrow, load_nrow)], data.table(meta = 5L, in_nrow = 4L, unq_nrow = 3L, load_nrow = 1L), info = "incremental load, expected in_nrow, unq_nrow and load_nrow for shared knot of attributes")
+    expect_equal(am$OBJ("RAT")$data, data.table(RAT_ID = 1:5, RAT_Rating = c("Good","VeryGood","Bad","Medicore","Great"), Metadata_RAT = c(rep(4L,4L),5L), key = "RAT_ID"), info = "incremental load, static shared knot knotted attr as expected")
 
     # evolve model 3: historized attribute
+    am$create(class = "attribute", anchor = "AC", mne = "HAC", desc = "HairColor", hist = TRUE, rest = TRUE)
+    am$run()
+    am$load(mapping = list(AC = list("code", HAC = c("hair", hist = "hair_date"))),
+            data = data.table(code = c(1:2,1L,3L), hair = c("black","red","white","blue"), hair_date = as.Date("2015-06-07")+c(0L,0L,1L,1L)),
+            meta = 6L)
+    expect_equal(am$OBJ("AC_HAC")$query(),
+                 data.table(AC_HAC_AC_ID = c(1L, 1L, 2L, 3L),
+                            AC_HAC_Actor_HairColor = c("black", "white", "red", "blue"),
+                            AC_HAC_ChangedAt = structure(c(16593, 16594, 16593, 16594), class = "Date"),
+                            Metadata_AC_HAC = c(6L, 6L, 6L, 6L),
+                            key = c("AC_HAC_AC_ID","AC_HAC_ChangedAt")),
+                 info = "historize attribute 1st load")
+
+    # incremental
+    am$load(mapping = list(AC = list("code", HAC = c("hair", hist = "hair_date"))),
+            data = data.table(code = c(1L,3L), hair = c("white","blue"), hair_date = as.Date("2015-06-07")+c(2L,-1L)), # both sides restatments
+            meta = 7L)
+    expect_equal(am$OBJ("AC_HAC")$query(),
+                 data.table(AC_HAC_AC_ID = c(1L, 1L, 1L, 2L, 3L, 3L),
+                            AC_HAC_Actor_HairColor = c("black", "white", "white", "red", "blue", "blue"),
+                            AC_HAC_ChangedAt = structure(c(16593, 16594, 16595, 16593, 16592, 16594), class = "Date"),
+                            Metadata_AC_HAC = c(6L, 6L, 7L, 6L, 7L, 6L),
+                            key = c("AC_HAC_AC_ID","AC_HAC_ChangedAt")),
+                 info = "historize attribute 2st load, both sides restatements")
 
     # evolve model 4: historized knotted attribute
+    am$create(class = "attribute", anchor = "AC", mne = "HC2", desc = "HairColor", hist = TRUE, knot = "COL") # same logical attribute but this time knotted
+    am$create(class = "knot", mne = "COL", desc = "Color")
+    # am$run()
+    # am$load()
 
-    # evolve model 5: historized attribute + static attribute to single shared knot
+    # evolve model 5: (historized attribute + static attribute) to single shared knot
+    am$create(class = "attribute", anchor = "ST", mne = "MIN", desc = "Minimum", knot = "UTL")
+    am$create(class = "attribute", anchor = "ST", mne = "AVG", desc = "Average", hist = TRUE, knot = "UTL")
+    am$create(class = "knot", mne = "UTL", desc = "Utilization")
+    # am$run()
+    # am$load()
+
+    # same but incrementally changed knot from regular to shared
+    am$delete(c("UTL","ST_MIN","ST_AVG"))
+    am$create(class = "attribute", anchor = "ST", mne = "AVG", desc = "Average", hist = TRUE, knot = "UTL")
+    am$create(class = "knot", mne = "UTL", desc = "Utilization")
+    # am$run()
+    # am$load()
+
+    am$create(class = "attribute", anchor = "ST", mne = "MIN", desc = "Minimum", knot = "UTL")
+    # am$run()
+    # am$load()
 
 })
 
@@ -97,7 +143,7 @@ test_that("AM load - auto IM", {
 
 })
 
-test_that("AM load - hist without restatements", {
+test_that("AM load - hist=FALSE without restatements", {
 
     skip("restatements in dev")
 
@@ -166,7 +212,7 @@ test_that("multiple AM instances loading including separation of IM instances", 
 
 })
 
-test_that("AM loading method technical exception scenarios", {
+test_that("AM loading - technical exceptions scenarios", {
 
     # loading only anchor - no attributes etc
     am <- AM$new()
@@ -189,7 +235,7 @@ test_that("AM loading method technical exception scenarios", {
 
 })
 
-test_that("AM loading method data model validation failure", {
+test_that("AM loading - data model validation failures", {
 
     am <- AM$new()
     am$create(class = "anchor", mne = "PR", desc = "Program")
