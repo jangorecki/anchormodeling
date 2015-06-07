@@ -258,7 +258,7 @@ AM <- R6Class(
                 cols <- cols[-length(cols)] # exclude metadata col
                 if(!identical(src_cols,cols)) stop(paste0("Expected columns for anchor ",anchor_code, "do not exist in incoming data, use built-in IM or provide mne_ID columns for anchors."), call. = FALSE)
                 self$OBJ(anchor_code)$load(
-                    data = data[, src_cols, with=FALSE],
+                    data = data[, src_cols, with=FALSE], # anchor names already maps from auto-im
                     meta = meta
                 )
                 # loading child attributes
@@ -275,16 +275,13 @@ AM <- R6Class(
             })
             # loading ties
             lapply(load_seq["tie", code, nomatch=0L], function(tie_code){
-                browser()
                 if(!all(self$OBJ(tie_code)$anchors %chin% names(mapping))) stop(paste0("Cannot load tie ",tie_code," without loading anchors for it, missing anchor in load: ",paste(self$OBJ(tie_code)$anchors[!self$OBJ(tie_code)$anchors %chin% names(mapping)], collapse=", "),"."), call. = FALSE)
                 src_cols <- paste0(names(mapping)[names(mapping) %chin% self$OBJ(tie_code)$anchors], "_ID")
-                knot_col <- mapping[[tie_code]][["knot"]]
-                hist_col <- mapping[[tie_code]][["hist"]]
-                src_cols <- c(paste_(knot_code,"ID"), src_cols)
+                src_cols <- c(src_cols, mapping[[tie_code]][["knot"]], mapping[[tie_code]][["hist"]])
                 cols <- self$OBJ(tie_code)$cols
                 cols <- cols[-length(cols)] # exclude metadata col
                 self$OBJ(tie_code)$load(
-                    data = data[, src_cols, with=FALSE],
+                    data = data[, src_cols, with=FALSE][, setnames(.SD, src_cols, cols)],
                     meta = meta
                 )
             })

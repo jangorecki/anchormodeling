@@ -21,7 +21,7 @@
       - [ ] attribute
         - [x] static
         - [x] knotted
-        - [ ] historized
+        - [x] historized
         - [ ] knotted historized
       - [ ] knot
         - [x] static of attributes
@@ -30,6 +30,7 @@
         - [ ] shared knots of ties
         - [ ] shared knots of attribute and tie
       - [ ] tie
+        - [x] static
         - [ ] knotted
         - [ ] historized
         - [ ] knotted historized
