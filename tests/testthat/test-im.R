@@ -76,8 +76,6 @@ test_that("auto im$create while im$use", {
                    nk = list(UA = c("User_login","User_action")))
     expect_identical(names(data), c("User_login","User_action","user_login","user_action","UA_ID"), info = "composite key after dynamic remap by `nk` argument")
 
-
-
 })
 
 test_that("IM naming convention to detect AMobj class", {
@@ -121,16 +119,17 @@ test_that("IM naming convention to detect AMobj class", {
                      info = "Columns check for shared knots")
     expect_identical(names(im$ID[["RAT"]]), c("rating1","RAT_ID"), info = "knots with composite natural keys gets union'ed and stored in single column to get ID")
 
-    # remap columns on demand
+    # remap columns on demand - anchor and knot
     nk <- list(UL = "user_login",
-               CO = "content_id",
+               CO = "Content_id",
                RAT = c("rating_avg1","rating_avg2"))
-    data <- data.table(user_login = c("nick3","nick4","nick4"), content_id = c(1L,2L,2L), rating_avg1_date = as.Date("2015-06-07")+c(0L,0L,3L), rating_avg1 = smpr(3), rating_avg2_date = as.Date("2015-06-07")+c(3L,3L,4L), rating_avg2 = smpr(3))
+    data <- data.table(user_login = c("nick3","nick4","nick4"), Content_id = c(1L,2L,2L), rating_avg1_date = as.Date("2015-06-07")+c(0L,0L,3L), rating_avg1 = smpr(3), rating_avg2_date = as.Date("2015-06-07")+c(3L,3L,4L), rating_avg2 = smpr(3))
     data <- im$use(data = data, nk = nk, mne = c("UL","CO","RAT")) # use nk to remap cols
     expect_identical(names(data),
-                     c("user_login", "content_id", "rating_avg1_date", "rating_avg1", "rating_avg2_date", "rating_avg2", "UL_ID", "CO_ID", "rating_avg1_RAT_ID", "rating_avg2_RAT_ID"),
+                     c("user_login", "Content_id", "rating_avg1_date", "rating_avg1", "rating_avg2_date", "rating_avg2", "content_id", "UL_ID", "CO_ID", "rating_avg1_RAT_ID", "rating_avg2_RAT_ID"),
                      info = "Columns check for shared knots after remap")
     expect_identical(names(im$ID[["RAT"]]), c("rating1","RAT_ID"), info = "knots with composite natural keys gets union'ed and stored in single column to get ID after remap")
+    expect_identical(names(im$ID[["CO"]]), c("content_id","CO_ID"), info = "anchor correct dynamic remap")
 
 })
 
