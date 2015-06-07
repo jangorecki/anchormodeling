@@ -85,15 +85,16 @@ AM <- R6Class(
                 self$data[eval(cd), verbose = getOption("am.key.verbose")][class %chin% eval(cl), verbose = getOption("am.key.verbose")]
             }
         }, # used for self lookup
-        update = function(code, class = c("anchor","attribute","tie","knot")){
-            stop("update method not available, use $delete and $create")
+        update = function(code){
+            stop("Update method not available, use $delete and $create or simply create the new one.")
             invisible(self)
         },
-        delete = function(code, class = c("anchor","attribute","tie","knot")){
+        delete = function(code){
             private$instance_run <- FALSE
-            self$data <- self$data[!.(code)]
+            v.code <- code; rm(code)
+            self$data <- self$data[!v.code]
             setkeyv(self$data, c("code"))[]
-            private$log_list <- c(private$log_list, list(list(event = "delete", obj = code, timestamp = Sys.time())))
+            private$log_list <- c(private$log_list, list(list(event = "delete", obj = v.code, timestamp = Sys.time())))
             invisible(self)
         },
         # RUN
@@ -150,30 +151,26 @@ AM <- R6Class(
                 length(names(data))==uniqueN(names(data)) # no duplicate names in `data` allowed
             )
             anchors_mne <- names(mapping)[names(mapping) %chin% self$read(class="anchor")$mne]
+            not_anchors_mne <- names(mapping)[!names(mapping) %chin% anchors_mne]
             # tie related handling
-            tie_code <- names(mapping)[names(mapping) %chin% self$read(class="tie")$code]
-            if(nrow(self$read(class="tie")) > 0){
-                tie_duplicate_short_code <- names(mapping)[
-                    names(mapping) %chin%
-                        self$read(class="tie")[, .(N = .N), .(short_code = paste_(c(unlist(anchors), knot)))][N > 1L, short_code]
+            ties_code <- names(mapping)[names(mapping) %chin% self$read(class="tie")$code]
+            if(length(not_anchors_mne) > 0L && nrow(self$read(class="tie")) > 0){
+                tie_duplicate_short_code <- not_anchors_mne[
+                    not_anchors_mne %chin% self$read(class="tie")[, .(short_code = paste_(c(unlist(anchors), na.omit(knot)))), code][, .(N = .N), short_code][N > 1L, short_code]
                     ]
                 if(length(tie_duplicate_short_code) > 0L){
                     stop(paste0("Non-unique code lookup for short tie code: ",paste(tie_duplicate_short_code, collapse=", "),". Include roles in provided tie entity in defined mapping. Use tie codes from you AM instance."))
                 }
-                tie_map_short_code <- names(mapping)[
-                    !names(mapping) %chin%
-                        c(anchors_mne, tie_code)
-                    ]
-                tie_mapped <- self$read(class="tie")[,.(code),,.(short_code = paste_(c(unlist(anchors), knot)))][tie_map_short_code, .(code), .EACHI, nomatch=NA_character_]
+                tie_map_short_code <- not_anchors_mne[!not_anchors_mne %chin% ties_code]
+                tie_mapped <- self$read(class="tie")[,.(short_code = paste_(c(unlist(anchors), na.omit(knot)))), code][,.SD,, short_code][tie_map_short_code, .(code), .EACHI, nomatch=NA_character_]
                 if(tie_mapped[is.na(code), .N > 0L]){
                     stop(paste0("Following short code of tie was not able to map to any tie:",tie_mapped[is.na(code), paste(tie_mapped, short_code=", ")],". See am print method for defined entities and provide tie code."))
                 }
                 names(mapping)[names(mapping) == tie_map_short_code] <- tie_mapped[tie_map_short_code, code] # mapping elements renamed
-                tie_code <- unique(c(tie_code, tie_mapped$code)) # all ties remapped to unique codes
-
+                ties_code <- unique(c(ties_code, tie_mapped$code)) # all ties remapped to unique codes
             }
             # general processing
-            if(length(mapping)!=length(c(anchors_mne, tie_code))){
+            if(length(mapping)!=length(c(anchors_mne, ties_code))){
                 stop("Mapping list definition should contain only anchor memonics or unique codes of ties based on pasted anchors and knot mnes. See AM instance print for defined entities.")
             }
             if(!all(anchors_mne %chin% self$read(class = c("anchor"))$mne)){
@@ -204,12 +201,12 @@ AM <- R6Class(
                 "anchor" = data.table(anchor = NA_character_, class = "anchor", mne = anchors_mne, code = anchors_mne, hist = FALSE, knot = NA_character_, src_col = paste(anchors_mne,"ID",sep="_"), hist_col = NA_character_),
                 "knot" = unique(rbindlist(list(
                     "knot of attr" = mapping_attrs_dt[!is.na(knot), .(anchor = NA_character_, class = "knot", mne = knot, code = knot, hist = FALSE, knot = NA_character_, src_col = NA_character_, hist_col = NA_character_), .(byknot = knot)][, unique(.SD), .SDcols=-"byknot"],
-                    "knot of tie" = self$read(tie_code)[!is.na(knot), .(anchor = NA_character_, class = "knot", mne = knot, code = knot, hist = FALSE, knot = NA_character_, src_col = NA_character_, hist_col = NA_character_), .(byknot = knot)][, unique(.SD), .SDcols=-"byknot"]
+                    "knot of tie" = self$read(ties_code)[!is.na(knot), .(anchor = NA_character_, class = "knot", mne = knot, code = knot, hist = FALSE, knot = NA_character_, src_col = NA_character_, hist_col = NA_character_), .(byknot = knot)][, unique(.SD), .SDcols=-"byknot"]
                 ))),
                 "attr" = mapping_attrs_dt[, .(anchor, class = rep("attribute",length(mne)), mne, code, hist, knot, src_col, hist_col)],
                 "tie" = rbindlist(c(
                     list(data.table(code = character(), src_col = character(), hist = logical(), knot = character(), hist_col = character())),
-                    lapply(tie_code, T.dt, mapping)
+                    lapply(ties_code, T.dt, mapping)
                 ))[, .(anchor = rep(NA_character_,length(code)), class = rep("tie",length(code)), mne = rep(NA_character_,length(code)), code, hist, knot, src_col, hist_col)]
             ))
             setkeyv(load_seq, c("class","anchor"))
@@ -259,7 +256,7 @@ AM <- R6Class(
                 src_cols <- load_seq[code==anchor_code, src_col]
                 cols <- self$OBJ(anchor_code)$cols
                 cols <- cols[-length(cols)] # exclude metadata col
-                stopifnot(src_cols == cols)
+                if(!identical(src_cols,cols)) stop(paste0("Expected columns for anchor ",anchor_code, "do not exist in incoming data, use built-in IM or provide mne_ID columns for anchors."), call. = FALSE)
                 self$OBJ(anchor_code)$load(
                     data = data[, src_cols, with=FALSE],
                     meta = meta
@@ -277,19 +274,20 @@ AM <- R6Class(
                 })
             })
             # loading ties
-            # browser()
-            #             lapply(load_seq["tie", code, nomatch=0L], function(knot_code){
-            #                 src_cols <- load_seq[c("attribute","tie"), nomatch=0L][knot==knot_code, src_cols]
-            #                 src_cols <- c(paste_(knot_code,"ID"), src_cols)
-            #                 cols <- self$read(knot_code)$obj[[1L]]$cols
-            #                 cols <- cols[-length(cols)] # exclude metadata col
-            #                 value.name <- self$read(knot_code)$name
-            #                 stopifnot(c(src_cols[1L], value.name) == cols)
-            #                 self$OBJ(knot_code)$load(
-            #                     data = melt(data[, src_cols, with=FALSE], id.vars = src_cols[1L], measure.vars = src_cols[-1L], value.name = value.name)[, .SD, .SDcols=-"variable"], # support for multi child knots, will load from all src_cols into one
-            #                     meta = meta
-            #                 )
-            #             })
+            lapply(load_seq["tie", code, nomatch=0L], function(tie_code){
+                browser()
+                if(!all(self$OBJ(tie_code)$anchors %chin% names(mapping))) stop(paste0("Cannot load tie ",tie_code," without loading anchors for it, missing anchor in load: ",paste(self$OBJ(tie_code)$anchors[!self$OBJ(tie_code)$anchors %chin% names(mapping)], collapse=", "),"."), call. = FALSE)
+                src_cols <- paste0(names(mapping)[names(mapping) %chin% self$OBJ(tie_code)$anchors], "_ID")
+                knot_col <- mapping[[tie_code]][["knot"]]
+                hist_col <- mapping[[tie_code]][["hist"]]
+                src_cols <- c(paste_(knot_code,"ID"), src_cols)
+                cols <- self$OBJ(tie_code)$cols
+                cols <- cols[-length(cols)] # exclude metadata col
+                self$OBJ(tie_code)$load(
+                    data = data[, src_cols, with=FALSE],
+                    meta = meta
+                )
+            })
             invisible(self)
         },
         OBJ = function(code) self$read(code)$obj[[1L]],
