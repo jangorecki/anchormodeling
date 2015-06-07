@@ -246,10 +246,10 @@ AM <- R6Class(
                 } else {
                     # shared knots
                     self$OBJ(knot_code)$load(
-                        data = melt(data = data[, c(paste(src_cols, knot_code, "ID", sep="_"), src_cols), with=FALSE][, unique(.SD)],
+                        data = melt(data = data[, c(paste(src_cols, knot_code, "ID", sep="_"), src_cols), with=FALSE],
                                     measure.vars = list(1:2, seq_len(length(src_cols))+2L),
                                     variable.name = "variable",
-                                    value.name = cols)[, unique(.SD), .SDcols=-"variable"],
+                                    value.name = cols)[, .SD, .SDcols=-"variable"],
                         meta = meta
                     )
                 } # shared knots
