@@ -12,6 +12,6 @@ test_that("AM read method", {
     am$load(mapping = list(AC = list("code", NAM = "name")),
             data = data.table(code = "1", name = "Mike"),
             meta = 1L)
-    expect_identical(names(am$read()), c("code", "name", "class", "mne", "desc", "obj", "hist", "knot", "anchor", "parents", "childs"), info = "After *am$run* all columns exists")
+    expect_identical(names(am$read()), c("code", "name", "class", "mne", "desc", "obj", "hist", "knot", "anchor", "anchors", "parents", "childs"), info = "After *am$run* all columns exists")
 
 })
