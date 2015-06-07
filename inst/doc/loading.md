@@ -16,6 +16,24 @@
 - [ ] loading process
   - [ ] two pass: detailed validation in first loop
   - [ ] AM$load
+    - [ ] loading of entities
+      - [x] anchor
+      - [ ] attribute
+        - [x] static
+        - [x] knotted
+        - [ ] historized
+        - [ ] knotted historized
+      - [ ] knot
+        - [x] static of attributes
+        - [ ] static of ties
+        - [x] shared knots of attributes
+        - [ ] shared knots of ties
+        - [ ] shared knots of attribute and tie
+      - [ ] tie
+        - [ ] knotted
+        - [ ] historized
+        - [ ] knotted historized
+        - [ ] 3+ anchor ties
     - [x] unique names `length(names(data))==uniqueN(names(data))`
     - [x] model-mapping validation
       - [x] multiple *exists*/*valid* checks
@@ -28,7 +46,7 @@
       - [x] knots
       - [x] anchors
         - [x] attributes
-      - [ ] ties
+      - [x] ties
     - [x] child classes related validation
     - [x] call $load.AMobj just with a subset of cols
     - [x] rename *src cols* to *tbl cols*
@@ -47,4 +65,3 @@
 - [ ] rollback based on metadata ID delete from all
   - [ ] new method for delete data by meta id from all tables
 - [ ] create indexes after insert
-- [ ] shared knots etl: loading, auto-im, view

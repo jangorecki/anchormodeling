@@ -131,9 +131,9 @@ a.dt <- function(aname, x){
 T.dt <- function(Tname, x){
     data.table(
         code = Tname,
-        src_col = NA_character_,
+        src_col = as.character(as.list(x[[Tname]])[["knot"]])[1L],
         hist = !is.na(as.character(as.list(x[[Tname]])[["hist"]])[1L]),
-        knot = as.character(as.list(x[[Tname]])[["knot"]])[1L],
+        knot = NA_character_, # knot mne should be taken from AM model
         hist_col = as.character(as.list(x[[Tname]])[["hist"]])[1L]
     )
 }

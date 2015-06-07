@@ -1,6 +1,75 @@
 context("AM load method")
 
-test_that("AM load method valid processing non-hist scenarios", {
+test_that("AM load - attribute tests", {
+
+    am <- AM$new()
+    am$create(class = "anchor", mne = "AC", desc = "Actor")
+    am$create(class = "attribute", anchor = "AC", mne = "NAM", desc = "Name")
+    am$run()
+
+    # initial loading data, auto IM
+    am$load(mapping = list(AC = list("code", NAM = "name")),
+            data = data.table(code = 1L, name = "Bob"),
+            meta = 1L)
+
+    # evolve model 1: add knotted attribute
+    am$create(class = "attribute", anchor = "AC", mne = "GEN", desc = "Gender", knot = "GEN")
+    am$create(class = "knot", mne = "GEN", desc = "Gender")
+    am$run()
+    am$load(mapping = list(AC = list("code", NAM = "name", GEN = "gender")),
+            data = data.table(code = 2L, name = "Alice", gender = "F"),
+            meta = 2L)
+    expect_equal(am$OBJ("GEN")$data, data.table(GEN_ID = 1L, GEN_Gender = "F", Metadata_GEN = 2L, key = "GEN_ID"), info = "static knotted attr as expected")
+
+    # incremental load
+    am$load(mapping = list(AC = list("code", NAM = "name", GEN = "gender")),
+            data = data.table(code = 1:2, name = c("Bob","Alice"), gender = c("M","F")),
+            meta = 3L)
+    expect_equal(am$OBJ("GEN")$data, data.table(GEN_ID = 1:2, GEN_Gender = c("F","M"), Metadata_GEN = 2:3, key = "GEN_ID"), info = "incremental load of static knotted attr as expected")
+
+    # evolve model 2: shared knot of attribute
+    am$create(class = "attribute", anchor = "AC", mne = "RAL", desc = "LowerRating", knot = "RAT")
+    am$create(class = "attribute", anchor = "AC", mne = "RAH", desc = "HigherRating", knot = "RAT")
+    am$create(class = "knot", mne = "RAT", desc = "Rating")
+    am$run()
+    am$load(mapping = list(AC = list("code", RAH = "ratingH", RAL = "ratingL")),
+            data = data.table(code = 1:2, ratingH = c("Good","VeryGood"), ratingL = c("Bad","Medicore")),
+            meta = 4L)
+    expect_equal(am$OBJ("RAT")$data, data.table(RAT_ID = 1:4, RAT_Rating = c("Good","VeryGood","Bad","Medicore"), Metadata_RAT = rep(4L,4L), key = "RAT_ID"), info = "static shared knot knotted attr as expected")
+
+    # incremetal load
+    am$load(mapping = list(AC = list("code", RAH = "ratingH", RAL = "ratingL")),
+            data = data.table(code = 3:4, ratingH = c("Good","Great"), ratingL = c("Bad","Medicore")), # one new
+            meta = 5L)
+    expect_equal(am$OBJ("RAT")$data, data.table(RAT_ID = 1:5, RAT_Rating = c("Good","VeryGood","Bad","Medicore","Great"), Metadata_RAT = c(rep(4L,4L),5L), key = "RAT_ID"), info = "incremental load of static shared knot knotted attr as expected")
+
+    # evolve model 3: historized attribute
+
+    # evolve model 4: historized knotted attribute
+
+    # evolve model 5: historized attribute + static attribute to single shared knot
+
+})
+
+test_that("AM load - ties tests", {
+
+#     am$create(class = "anchor", mne = "PE", desc = "Performance")
+#     am$create(class = "tie", anchors = c("PE","PR"), roles = c("at","wasPlayed"), identifier = c(1,Inf))
+#     am$run()
+#
+#     #     am$load(mapping = list(PE = list("perf_code")),
+#     #             data = data.table(perf_code = 1L, prog_code = c(1L,50L)),
+#     #             meta = 4L)
+#
+#     # evolve model 2
+#     am$create(class = "anchor", mne = "AC", desc = "Actor")
+#
+#     am$create(class = "tie", anchors = c("AC","PE"), roles = c("wasCasted","in"), identifier = c(Inf,Inf))
+#     am$run()
+
+})
+
+test_that("AM load - auto IM", {
 
     am <- AM$new()
     am$create(class = "anchor", mne = "PR", desc = "Program")
@@ -26,31 +95,17 @@ test_that("AM load method valid processing non-hist scenarios", {
     expect_identical(am$process()$rows, rep(2L,2L), info = "loaded second row twice")
     expect_equal(am$IM()$ID$PR, data.table(code = c(1L,50L), PR_ID = 1:2, key = "code"), info = "auto IM after second insert twice")
 
-    # TO DO
-
-    # evolve model 1
-    am$create(class = "anchor", mne = "PE", desc = "Performance")
-    am$create(class = "tie", anchors = c("PE","PR"), roles = c("at","wasPlayed"), identifier = c(1,Inf))
-    am$run()
-
-    #     am$load(mapping = list(PE = list("perf_code")),
-    #             data = data.table(perf_code = 1L, prog_code = c(1L,50L)),
-    #             meta = 4L)
-
-    # evolve model 2
-    am$create(class = "anchor", mne = "AC", desc = "Actor")
-    am$create(class = "attribute", anchor = "AC", mne = "GEN", desc = "Gender", knot = "GEN")
-    am$create(class = "knot", mne = "GEN", desc = "Gender")
-    am$create(class = "tie", anchors = c("AC","PE"), roles = c("wasCasted","in"), identifier = c(Inf,Inf))
-    am$run()
-
 })
 
-test_that("AM load method valid processing hist scenarios", {
+test_that("AM load - hist without restatements", {
+
+    skip("restatements in dev")
+
+    # attribute
 
     am <- AM$new()
     am$create(class = "anchor", mne = "AC", desc = "Actor")
-    am$create(class = "attribute", anchor = "AC", mne = "NAM", desc = "Name", hist = TRUE)
+    am$create(class = "attribute", anchor = "AC", mne = "NAM", desc = "Name", hist = TRUE, rest = FALSE)
     am$run()
 
     # initial loading hits data
@@ -75,17 +130,14 @@ test_that("AM load method valid processing hist scenarios", {
                             key = c("AC_NAM_AC_ID","AC_NAM_ChangedAt")),
                  info = "historized duplicates on PK silently ignored")
 
-    # restatment
+    # incremental loading new hist data but with same value as previous/next value - because of restatement = FALSE they should not be loaded
 
-    # TO DO
+    # tie
 
-    # evolve
     am$create(class = "anchor", mne = "PR", desc = "Program")
-    am$create(class = "tie", anchors = c("AC","PR"), roles = c("part","in"), identifier = c(Inf,Inf,1), knot = "RAT")
+    am$create(class = "tie", anchors = c("AC","PR"), roles = c("part","in"), identifier = c(Inf,Inf,1), knot = "RAT", rest = FALSE)
     am$create(class = "knot", mne = "RAT", desc = "Rating")
     am$run()
-
-    expect_true(TRUE, info = "dummy")
 
 })
 

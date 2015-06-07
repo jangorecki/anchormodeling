@@ -220,7 +220,7 @@ AM <- R6Class(
                 nk <- lapply(mapping[anchors_mne],`[[`,1L)
                 knot_mne <- load_seq["knot", unique(mne), nomatch=0L]
                 if(length(knot_mne) > 0L){
-                    knot_mapping <- as.list(load_seq[knot==knot_mne, setNames(list(c(src_col), mne))])
+                    knot_mapping <- as.list(load_seq[knot==knot_mne, setNames(list(c(src_col)), knot_mne)])
                     nk <- c(nk, knot_mapping)
                 }
                 data <- self$im$use(data, mne = names(nk), nk = nk, in.place = FALSE)
@@ -235,34 +235,42 @@ AM <- R6Class(
             } else stop ("Invalid meta argument")
             # loading knots
             lapply(load_seq["knot", code, nomatch=0L], function(knot_code){
-                src_cols <- load_seq[c("attribute","tie"), nomatch=0L][knot==knot_code, src_cols]
-                src_cols <- c(paste_(knot_code,"ID"), src_cols)
-                cols <- self$read(knot_code)$obj[[1L]]$cols
+                src_cols <- load_seq[knot==knot_mne, c(src_col)]
+                cols <- self$OBJ(knot_code)$cols
                 cols <- cols[-length(cols)] # exclude metadata col
-                value.name <- self$read(knot_code)$name
-                stopifnot(c(src_cols[1L], value.name) == cols)
-                self$data[knot_code, obj][[1L]]$load(
-                    data = melt(data[, src_cols, with=FALSE], id.vars = src_cols[1L], measure.vars = src_cols[-1L], value.name = value.name)[, .SD, .SDcols=-"variable"], # support for multi child knots, will load from all src_cols into one
-                    meta = meta
-                )
+                if(length(src_cols)==1L){
+                    self$OBJ(knot_code)$load(
+                        data = data[, c(paste_(src_cols, knot_code, "ID"), src_cols), with=FALSE][, setnames(.SD, c(paste_(src_cols, knot_code, "ID"), src_cols), cols)],
+                        meta = meta
+                    )
+                } else {
+                    # shared knots
+                    self$OBJ(knot_code)$load(
+                        data = melt(data = data[, c(paste(src_cols, knot_code, "ID", sep="_"), src_cols), with=FALSE][, unique(.SD)],
+                                    measure.vars = list(1:2, seq_len(length(src_cols))+2L),
+                                    variable.name = "variable",
+                                    value.name = cols)[, unique(.SD), .SDcols=-"variable"],
+                        meta = meta
+                    )
+                } # shared knots
             })
             # loading anchors
             lapply(load_seq["anchor", code, nomatch=0L], function(anchor_code){
                 src_cols <- load_seq[code==anchor_code, src_col]
-                cols <- self$read(anchor_code)$obj[[1L]]$cols
+                cols <- self$OBJ(anchor_code)$cols
                 cols <- cols[-length(cols)] # exclude metadata col
                 stopifnot(src_cols == cols)
-                self$data[anchor_code, obj][[1L]]$load(
+                self$OBJ(anchor_code)$load(
                     data = data[, src_cols, with=FALSE],
                     meta = meta
                 )
                 # loading child attributes
                 lapply(load_seq[CJ("attribute", anchor_code), code, nomatch=0L], function(attr_code){
-                    src_cols <- load_seq[code==attr_code, c(if(is.na(knot)) src_col else paste_(knot,"ID"), if(hist) hist_col else character())]
+                    src_cols <- load_seq[code==attr_code, c(if(is.na(knot)) src_col else paste_(src_col, knot,"ID"), if(hist) hist_col else character())]
                     src_cols <- c(paste_(anchor_code,"ID"), src_cols)
-                    cols <- self$read(attr_code)$obj[[1L]]$cols
+                    cols <- self$OBJ(attr_code)$cols
                     cols <- cols[-length(cols)] # exclude metadata col
-                    self$data[attr_code, obj][[1L]]$load(
+                    self$OBJ(attr_code)$load(
                         data = data[, src_cols, with=FALSE][, setnames(.SD, src_cols, cols)],
                         meta = meta
                     )
@@ -277,7 +285,7 @@ AM <- R6Class(
             #                 cols <- cols[-length(cols)] # exclude metadata col
             #                 value.name <- self$read(knot_code)$name
             #                 stopifnot(c(src_cols[1L], value.name) == cols)
-            #                 self$data[knot_code, obj][[1L]]$load(
+            #                 self$OBJ(knot_code)$load(
             #                     data = melt(data[, src_cols, with=FALSE], id.vars = src_cols[1L], measure.vars = src_cols[-1L], value.name = value.name)[, .SD, .SDcols=-"variable"], # support for multi child knots, will load from all src_cols into one
             #                     meta = meta
             #                 )
