@@ -102,8 +102,10 @@ IM <- R6Class(
                     init_ID <- length(self$ID[[mne]])==0L
                     if(!init_ID){
                         # check nk data types
-                        if(!identical(sapply(self$ID[[mne]][0L, self$NK[[mne]], with=FALSE], class1),sapply(data[0L, self$NK[[mne]], with=FALSE], class1))){
-                            stop(paste0("Provided natural key columns are different type than the one stored in Identity Management. Related to mnemonic: ",mne))
+                        cl_IM <- sapply(self$ID[[mne]][0L, self$NK[[mne]], with=FALSE], class1)
+                        cl_DT <- sapply(data[0L, self$NK[[mne]], with=FALSE], class1)
+                        if(!identical(cl_IM,cl_DT)){
+                            stop(paste0("Provided natural key columns are different type than the one stored in Identity Management. Related to mnemonic: ",mne,". IM data types: ", paste(cl_IM,collapse=", "),". Incoming data types: ",paste(cl_DT,collapse=", "),"."))
                         }
                         # keep only new ID
                         new_nk.data <- self$ID[[mne]][data[, unique(.SD), .SDcols=self$NK[[mne]]]][is.na(eval(as.name(paste(mne,"ID",sep="_"))))]
