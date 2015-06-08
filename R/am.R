@@ -90,11 +90,13 @@ AM <- R6Class(
             invisible(self)
         },
         delete = function(code){
-            private$instance_run <- FALSE
-            v.code <- code; rm(code)
-            self$data <- self$data[!v.code]
+            self$stop()
+            to_delete <- code %chin% self$data$code
+            if(!all(to_delete)) warning(paste0("Following codes cannot be deleted as they not exists in the model: ",paste(code[!to_delete], collapse=", "),"."))
+            code_to_delete <- code[to_delete]
+            self$data <- self$data[!code_to_delete]
             setkeyv(self$data, c("code"))[]
-            private$log_list <- c(private$log_list, list(list(event = "delete", obj = v.code, timestamp = Sys.time())))
+            for(code_deleted in code_to_delete) private$log_list <- c(private$log_list, list(list(event = "delete", obj = code_deleted, timestamp = Sys.time())))
             invisible(self)
         },
         # RUN
