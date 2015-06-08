@@ -74,26 +74,125 @@ test_that("AM load - attribute tests", {
     # evolve model 4: historized knotted attribute
     am$create(class = "attribute", anchor = "AC", mne = "HC2", desc = "HairColor", hist = TRUE, knot = "COL") # same logical attribute but this time knotted
     am$create(class = "knot", mne = "COL", desc = "Color")
-    # am$run()
-    # am$load()
+    am$run()
+    am$load(mapping = list(AC = list("code", HC2 = c("hair", hist = "hair_date"))),
+            data = data.table(code = c(1:2,1L,3L), hair = c("black","red","white","blue"), hair_date = as.Date("2015-06-07")+c(0L,0L,1L,1L)),
+            meta = 8L)
+    expect_equal(am$OBJ("AC_HC2")$query(),
+                 data.table(AC_HC2_AC_ID = c(1L, 1L, 2L, 3L),
+                            AC_HC2_COL_ID = c(1L, 3L, 2L, 4L),
+                            AC_HC2_ChangedAt = structure(c(16593, 16594, 16593, 16594), class = "Date"),
+                            Metadata_AC_HC2 = c(8L, 8L, 8L, 8L),
+                            key = c("AC_HC2_AC_ID","AC_HC2_ChangedAt")),
+                 info = "knotted historized attribute 1st load")
+
+    # incremental
+    am$load(mapping = list(AC = list("code", HC2 = c("hair", hist = "hair_date"))),
+            data = data.table(code = c(1L,3L), hair = c("white","blue"), hair_date = as.Date("2015-06-07")+c(2L,-1L)), # both sides restatments
+            meta = 9L)
+    expect_equal(am$OBJ("AC_HC2")$query(),
+                 data.table(AC_HC2_AC_ID = c(1L, 1L, 1L, 2L, 3L, 3L),
+                            AC_HC2_COL_ID = c(1L, 3L, 3L, 2L, 4L, 4L),
+                            AC_HC2_ChangedAt = structure(c(16593, 16594, 16595, 16593, 16592, 16594), class = "Date"),
+                            Metadata_AC_HC2 = c(8L, 8L, 9L, 8L, 9L, 8L),
+                            key = c("AC_HC2_AC_ID","AC_HC2_ChangedAt")),
+                 info = "knotted historized attribute 2st load, both sides restatements")
 
     # evolve model 5: (historized attribute + static attribute) to single shared knot
-    am$create(class = "attribute", anchor = "ST", mne = "MIN", desc = "Minimum", knot = "UTL")
-    am$create(class = "attribute", anchor = "ST", mne = "AVG", desc = "Average", hist = TRUE, knot = "UTL")
+    am$create(class = "attribute", anchor = "AC", mne = "MIN", desc = "Minimum", knot = "UTL")
+    am$create(class = "attribute", anchor = "AC", mne = "AVG", desc = "Average", hist = TRUE, knot = "UTL")
     am$create(class = "knot", mne = "UTL", desc = "Utilization")
-    # am$run()
-    # am$load()
+    am$run()
+    am$load(mapping = list(AC = list("code", MIN = "minimum", AVG = c("average", hist = "average_date"))),
+            data = data.table(code = 1:2, minimum = c("2","2+"), average = c("2+","4+"), average_date = rep(as.Date("2015-06-08"),2)),
+            meta = 10L)
+    expect_equal(am$OBJ("AC_MIN")$query(),
+                 data.table(AC_MIN_AC_ID = 1:2,
+                            AC_MIN_UTL_ID = c(3L, 1L),
+                            Metadata_AC_MIN = c(10L, 10L),
+                            key = "AC_MIN_AC_ID"),
+                 info = "shared knot to one hist attr and one non-hist attr, first load: non-hist attr")
+    expect_equal(am$OBJ("AC_AVG")$query(),
+                 data.table(AC_AVG_AC_ID = 1:2,
+                            AC_AVG_UTL_ID = 1:2,
+                            AC_AVG_ChangedAt = structure(c(16594, 16594), class = "Date"),
+                            Metadata_AC_AVG = c(10L, 10L),
+                            key = c("AC_AVG_AC_ID","AC_AVG_ChangedAt")),
+                 info = "shared knot to one hist attr and one non-hist attr, first load: hist attr")
+    expect_equal(am$OBJ("UTL")$query(),
+                 data.table(UTL_ID = 1:3,
+                            UTL_Utilization = c("2+", "4+", "2"),
+                            Metadata_UTL = c(10L, 10L, 10L),
+                            key = "UTL_ID"),
+                 info = "shared knot to one hist attr and one non-hist attr, first load: knot")
+
+#     incremetal load
+#     debug error
+#     am$load(mapping = list(AC = list("code", MIN = "minimum", AVG = c("average", hist = "average_date"))),
+#           data = data.table(code = 1, minimum = "2", average = "3+", average_date = as.Date("2015-06-08")+1L),
+#           meta = 11L)
+#     expect_equal()
+#
+#     incremetal loads only one of two attrs
+#     debug error
+#     am$load(mapping = list(AC = list("code", MIN = "minimum")),
+#            data = data.table(code = 3, minimum = "4"),
+#            meta = 12L)
+#     expect_equal()
+#     am$load(mapping = list(AC = list("code", AVG = c("average", hist = "average_date"))),
+#            data = data.table(code = 1, average = "5", average_date = as.Date("2015-06-08")+2L),
+#            meta = 13L)
+#     expect_equal()
+
+    # ADD SHARED KNOTS UT TO IM
 
     # same but incrementally changed knot from regular to shared
-    am$delete(c("UTL","ST_MIN","ST_AVG"))
-    am$create(class = "attribute", anchor = "ST", mne = "AVG", desc = "Average", hist = TRUE, knot = "UTL")
+    am$delete(c("UTL","AC_MIN","AC_AVG"))
+    am$create(class = "attribute", anchor = "AC", mne = "AVG", desc = "Average", hist = TRUE, knot = "UTL")
     am$create(class = "knot", mne = "UTL", desc = "Utilization")
-    # am$run()
-    # am$load()
+    am$run()
+    am$load(mapping = list(AC = list("code", AVG = c("average", hist = "average_date"))),
+            data = data.table(code = 1:2, minimum = c("2","2+"), average = c("2+","4+"), average_date = rep(as.Date("2015-06-08"),2)),
+            meta = 14L)
+    expect_equal(am$OBJ("AC_AVG")$query(),
+                 data.table(AC_AVG_AC_ID = 1:2,
+                            AC_AVG_UTL_ID = 1:2,
+                            AC_AVG_ChangedAt = structure(c(16594, 16594), class = "Date"),
+                            Metadata_AC_AVG = c(14L, 14L),
+                            key = c("AC_AVG_AC_ID","AC_AVG_ChangedAt")),
+                 info = "shared knot to one hist attr and one non-hist attr incrementally, first load: hist attr")
+    expect_equal(am$OBJ("UTL")$query(),
+                 data.table(UTL_ID = 1:2,
+                            UTL_Utilization = c("2+", "4+"),
+                            Metadata_UTL = c(14L, 14L),
+                            key = "UTL_ID"),
+                 info = "shared knot to one hist attr and one non-hist attr incrementally, first load: knot")
 
-    am$create(class = "attribute", anchor = "ST", mne = "MIN", desc = "Minimum", knot = "UTL")
-    # am$run()
-    # am$load()
+    # increment model to add attr making knot shared
+    am$create(class = "attribute", anchor = "AC", mne = "MIN", desc = "Minimum", knot = "UTL")
+    am$run()
+    am$load(mapping = list(AC = list("code", MIN = "minimum", AVG = c("average", hist = "average_date"))),
+            data = data.table(code = 1:2, minimum = c("2","2+"), average = c("2+","4+"), average_date = as.Date("2015-06-08")+0:1), # one update
+            meta = 15L)
+    expect_equal(am$OBJ("AC_MIN")$query(),
+                 data.table(AC_MIN_AC_ID = 1:2,
+                            AC_MIN_UTL_ID = c(3L, 1L),
+                            Metadata_AC_MIN = c(15L, 15L),
+                            key = "AC_MIN_AC_ID"),
+                 info = "shared knot to one hist attr and one non-hist attr incrementally, first load in second load batch: non-hist attr")
+    expect_equal(am$OBJ("AC_AVG")$query(),
+                 data.table(AC_AVG_AC_ID = c(1:2,2L),
+                            AC_AVG_UTL_ID = c(1:2,2L),
+                            AC_AVG_ChangedAt = structure(c(16594, 16594, 16595), class = "Date"),  # one update
+                            Metadata_AC_AVG = c(14L, 14L, 15L),
+                            key = c("AC_AVG_AC_ID","AC_AVG_ChangedAt")),
+                 info = "shared knot to one hist attr and one non-hist attr incrementally, second load: hist attr")
+    expect_equal(am$OBJ("UTL")$query(),
+                 data.table(UTL_ID = 1:3,
+                            UTL_Utilization = c("2+", "4+", "2"),
+                            Metadata_UTL = c(14L, 14L, 15L),
+                            key = "UTL_ID"),
+                 info = "shared knot to one hist attr and one non-hist attr incrementally, second load: knot")
 
 })
 
