@@ -126,25 +126,64 @@ test_that("AM load - attribute tests", {
                             key = "UTL_ID"),
                  info = "shared knot to one hist attr and one non-hist attr, first load: knot")
 
-#     incremetal load
-#     debug error
-#     am$load(mapping = list(AC = list("code", MIN = "minimum", AVG = c("average", hist = "average_date"))),
-#           data = data.table(code = 1, minimum = "2", average = "3+", average_date = as.Date("2015-06-08")+1L),
-#           meta = 11L)
-#     expect_equal()
-#
-#     incremetal loads only one of two attrs
-#     debug error
-#     am$load(mapping = list(AC = list("code", MIN = "minimum")),
-#            data = data.table(code = 3, minimum = "4"),
-#            meta = 12L)
-#     expect_equal()
-#     am$load(mapping = list(AC = list("code", AVG = c("average", hist = "average_date"))),
-#            data = data.table(code = 1, average = "5", average_date = as.Date("2015-06-08")+2L),
-#            meta = 13L)
-#     expect_equal()
+    # incremetal load
+    am$load(mapping = list(AC = list("code", MIN = "minimum", AVG = c("average", hist = "average_date"))),
+          data = data.table(code = 1L, minimum = "2", average = "3+", average_date = as.Date("2015-06-08")+1L),
+          meta = 11L)
+    expect_equal(am$OBJ("AC_MIN")$query(),
+                 data.table(AC_MIN_AC_ID = 1:2,
+                            AC_MIN_UTL_ID = c(3L, 1L),
+                            Metadata_AC_MIN = c(10L, 10L),
+                            key = "AC_MIN_AC_ID"),
+                 info = "shared knot to one hist attr and one non-hist attr, incremetal load: non-hist attr")
+    expect_equal(am$OBJ("AC_AVG")$query(),
+                 data.table(AC_AVG_AC_ID = c(1L,1:2),
+                            AC_AVG_UTL_ID = c(1L,4L,2L),
+                            AC_AVG_ChangedAt = structure(c(16594, 16595, 16594), class = "Date"),
+                            Metadata_AC_AVG = c(10L, 11L, 10L),
+                            key = c("AC_AVG_AC_ID","AC_AVG_ChangedAt")),
+                 info = "shared knot to one hist attr and one non-hist attr, incremetal load: hist attr")
+    expect_equal(am$OBJ("UTL")$query(),
+                 data.table(UTL_ID = 1:4,
+                            UTL_Utilization = c("2+", "4+", "2", "3+"),
+                            Metadata_UTL = c(10L, 10L, 10L, 11L),
+                            key = "UTL_ID"),
+                 info = "shared knot to one hist attr and one non-hist attr, incremetal load: knot")
 
-    # ADD SHARED KNOTS UT TO IM
+    # incremetal loads only first of two attrs
+    am$load(mapping = list(AC = list("code", MIN = "minimum")),
+            data = data.table(code = 3L, minimum = "4"), # new
+            meta = 12L)
+    expect_equal(am$OBJ("AC_MIN")$query(),
+                 data.table(AC_MIN_AC_ID = 1:3,
+                            AC_MIN_UTL_ID = c(3L, 1L, 5L),
+                            Metadata_AC_MIN = c(10L, 10L, 12L),
+                            key = "AC_MIN_AC_ID"),
+                 info = "shared knot to one non-hist attr, incremetal partial load: non-hist attr")
+    expect_equal(am$OBJ("UTL")$query(),
+                 data.table(UTL_ID = 1:5,
+                            UTL_Utilization = c("2+", "4+", "2", "3+", "4"),
+                            Metadata_UTL = c(10L, 10L, 10L, 11L, 12L),
+                            key = "UTL_ID"),
+                 info = "shared knot to one non-hist attr, incremetal partial load: knot")
+
+    # incremetal loads only second of two attrs
+    am$load(mapping = list(AC = list("code", AVG = c("average", hist = "average_date"))),
+           data = data.table(code = 2L, average = "5", average_date = as.Date("2015-06-08")+1L),
+           meta = 13L)
+    expect_equal(am$OBJ("AC_AVG")$query(),
+                 data.table(AC_AVG_AC_ID = c(1L,1:2,2L),
+                            AC_AVG_UTL_ID = c(1L,4L,2L,6L),
+                            AC_AVG_ChangedAt = structure(c(16594, 16595, 16594, 16595), class = "Date"),
+                            Metadata_AC_AVG = c(10L, 11L, 10L, 13L),
+                            key = c("AC_AVG_AC_ID","AC_AVG_ChangedAt")),
+                 info = "shared knot to one hist attr, incremetal load: hist attr")
+    expect_equal(am$OBJ("UTL")$query(),
+                 data.table(UTL_ID = 1:6,
+                            UTL_Utilization = c("2+", "4+", "2", "3+", "4", "5"),
+                            Metadata_UTL = c(10L, 10L, 10L, 11L, 12L, 13L),
+                            key = "UTL_ID"),
+                 info = "shared knot to one hist attr, incremetal partial load: knot")
 
     # same but incrementally changed knot from regular to shared
     am$delete(c("UTL","AC_MIN","AC_AVG"))
