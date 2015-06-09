@@ -21,8 +21,9 @@
       - [ ] attribute
         - [x] static
         - [x] knotted
+          - [x] dynamic shared knots
         - [x] historized
-        - [ ] knotted historized
+        - [x] knotted historized
       - [ ] knot
         - [x] static of attributes
         - [ ] static of ties
