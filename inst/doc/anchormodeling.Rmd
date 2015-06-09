@@ -126,7 +126,7 @@ am$add$a(mne = "TIM", desc = "Time", anchor = "CM")
 am$add$a(mne = "MES", desc = "Message", anchor = "CM")
 am$add$a(mne = "TAG", desc = "Tag", anchor = "CM")
 am$add$a(mne = "HSH", desc = "Hash", anchor = "CM")
-am$add$t(anchors = c("AU","CM"), roles = c("authoring","of"), identifier = c(1,Inf))
+am$add$t(anchors = c("AU","CM"), roles = c("authoring","of"), identifier = c(1,Inf), hist=TRUE)
 ```
 
 ## Run AM Data Warehouse instance
@@ -173,7 +173,8 @@ mapping <- list(CM = list("commit",
                           HSH = "commit"),
                 AU = list("author_email", # natural key
                           NAM = c("author", hist = "timestamp"),
-                          EMA = "author_email"))
+                          EMA = "author_email"),
+                AU_CM = list(hist = "timestamp"))
 ```
 
 `meta` argument is used as processing batch metadata. Can be integer `meta` or list, see example.  
