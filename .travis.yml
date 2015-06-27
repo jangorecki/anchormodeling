@@ -6,8 +6,8 @@ r_packages:
  - microbenchmark
  - shiny
  - shinydashboard
+ - DT
  - testthat
 
 r_github_packages:
- - RStudio/DT
  - Rdatatable/data.table
