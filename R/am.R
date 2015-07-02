@@ -154,7 +154,7 @@ AM <- R6Class(
             )
             anchors_mne <- names(mapping)[names(mapping) %chin% self$read(class="anchor")$mne]
             not_anchors_mne <- names(mapping)[!names(mapping) %chin% anchors_mne]
-            # tie related handling
+            # tie related handling - match short names PE_PR to long PE_at_PR_wasPlayed
             ties_code <- names(mapping)[names(mapping) %chin% self$read(class="tie")$code]
             if(length(not_anchors_mne) > 0L && nrow(self$read(class="tie")) > 0){
                 tie_duplicate_short_code <- not_anchors_mne[

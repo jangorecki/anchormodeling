@@ -237,19 +237,28 @@ test_that("AM load - attribute tests", {
 
 test_that("AM load - ties tests", {
 
-#     am$create(class = "anchor", mne = "PE", desc = "Performance")
-#     am$create(class = "tie", anchors = c("PE","PR"), roles = c("at","wasPlayed"), identifier = c(1,Inf))
-#     am$run()
-#
-#     #     am$load(mapping = list(PE = list("perf_code")),
-#     #             data = data.table(perf_code = 1L, prog_code = c(1L,50L)),
-#     #             meta = 4L)
-#
-#     # evolve model 2
-#     am$create(class = "anchor", mne = "AC", desc = "Actor")
-#
-#     am$create(class = "tie", anchors = c("AC","PE"), roles = c("wasCasted","in"), identifier = c(Inf,Inf))
-#     am$run()
+    am <- AM$new()
+    am$create(class = "anchor", mne = "PR", desc = "Program")
+    am$create(class = "anchor", mne = "PE", desc = "Performance")
+    am$create(class = "tie", anchors = c("PE","PR"), roles = c("at","wasPlayed"), identifier = c(1,Inf))
+    am$run()
+    am$load(mapping = list(PE = list("perf_code"),
+                           PR = list("prog_code"),
+                           PE_PR = list()),
+            data = data.table(perf_code = 1L, prog_code = c(1L,50L)),
+            meta = 1L)
+    expect_equal(am$OBJ("PE_at_PR_wasPlayed")$data, data.table(PE_ID_at = rep(1L,2), PR_ID_wasPlayed = 1:2, Metadata_PE_at_PR_wasPlayed = rep(1L,2), key = c("PE_ID_at","PR_ID_wasPlayed")), info = "static tie as expected")
+
+    # evolve model
+    am$create(class = "anchor", mne = "AC", desc = "Actor")
+    am$create(class = "tie", anchors = c("AC","PE"), roles = c("wasCasted","in"), identifier = c(Inf,Inf))
+    am$run()
+    am$load(mapping = list(PE = list("perf_code"),
+                           AC = list("acto_code"),
+                           AC_PE = list()),
+            data = data.table(perf_code = c(1:2,2L), acto_code = c(1L,1:2)),
+            meta = 2L)
+    expect_equal(am$OBJ("AC_wasCasted_PE_in")$data, data.table(AC_ID_wasCasted = c(1:2,2L), PE_ID_in = c(1L,1:2), Metadata_AC_wasCasted_PE_in = rep(2L,3), key = c("AC_ID_wasCasted","PE_ID_in")), info = "static tie evolution as expected")
 
 })
 
