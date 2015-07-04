@@ -249,7 +249,7 @@ test_that("AM load - ties tests", {
             meta = 1L)
     expect_equal(am$OBJ("PE_at_PR_wasPlayed")$data, data.table(PE_ID_at = rep(1L,2), PR_ID_wasPlayed = 1:2, Metadata_PE_at_PR_wasPlayed = rep(1L,2), key = c("PE_ID_at","PR_ID_wasPlayed")), info = "static tie as expected")
 
-    # evolve model
+    # evolve model: new static tie
     am$create(class = "anchor", mne = "AC", desc = "Actor")
     am$create(class = "tie", anchors = c("AC","PE"), roles = c("wasCasted","in"), identifier = c(Inf,Inf))
     am$run()
@@ -260,39 +260,32 @@ test_that("AM load - ties tests", {
             meta = 2L)
     expect_equal(am$OBJ("AC_wasCasted_PE_in")$data, data.table(AC_ID_wasCasted = c(1:2,2L), PE_ID_in = c(1L,1:2), Metadata_AC_wasCasted_PE_in = rep(2L,3), key = c("AC_ID_wasCasted","PE_ID_in")), info = "static tie evolution as expected")
 
-})
-
-test_that("AM load - auto IM", {
-
-    am <- AM$new()
-    am$create(class = "anchor", mne = "PR", desc = "Program")
-    am$create(class = "attribute", anchor = "PR", mne = "NAM", desc = "Name")
+    # evolve model: new historized tie
+    am$create(class = "anchor", mne = "ST", desc = "Stage")
+    am$create(class = "tie", anchors = c("PR","ST"), roles = c("isPlayed","at"), identifier = c(Inf,Inf), hist = TRUE)
     am$run()
-
-    # initial loading data, auto IM
-    am$load(mapping = list(PR = list("code", NAM = "name")),
-            data = data.table(code = 1L, name = "my program"),
-            meta = 1L)
-    expect_identical(am$process()$rows, rep(1L,2L), info = "loaded first row")
-    expect_equal(am$IM()$ID$PR, data.table(code = 1L, PR_ID = 1L, key = "code"), info = "auto IM after first insert")
-    # incremental loading new data, auto IM
-    am$load(mapping = list(PR = list("code", NAM = "name")),
-            data = data.table(code = 50L, name = "my another program"),
-            meta = 2L)
-    expect_identical(am$process()$rows, rep(2L,2L), info = "loaded second row")
-    expect_equal(am$IM()$ID$PR, data.table(code = c(1L,50L), PR_ID = 1:2, key = "code"), info = "auto IM after second insert")
-    # incremental loading same existing non historized data - should not be loaded
-    am$load(mapping = list(PR = list("code", NAM = "name")),
-            data = data.table(code = 50L, name = "my another program"),
+    am$load(mapping = list(PR = list("prog_code"),
+                           ST = list("stag_code"),
+                           PR_ST = list(hist = "date")),
+            data = data.table(prog_code = c(1:2,3L,3L), stag_code = c(1:2,2L,2L), date = as.Date("2015-07-03")+c(0:1,0:1)),
             meta = 3L)
-    expect_identical(am$process()$rows, rep(2L,2L), info = "loaded second row twice")
-    expect_equal(am$IM()$ID$PR, data.table(code = c(1L,50L), PR_ID = 1:2, key = "code"), info = "auto IM after second insert twice")
+    expect_equal(am$OBJ("PR_isPlayed_ST_at")$data, data.table(PR_ID_isPlayed = c(1L,3:4,4L), ST_ID_at = c(1:2,2L,2L), PR_isPlayed_ST_at_ChangedAt = as.Date("2015-07-03")+c(0:1,0:1), Metadata_PR_isPlayed_ST_at = rep(3L,4), key = c("PR_ID_isPlayed","ST_ID_at","PR_isPlayed_ST_at_ChangedAt")), info = "historized tie evolution as expected")
+
+    # evolve model: new knotted historized tie
+    am$create(class = "knot", mne = "RAT", desc = "Rating")
+    am$create(class = "tie", anchors = c("AC","PR"), knot = "RAT", roles = c("part","in","got"), identifier = c(Inf,Inf,1), hist = TRUE)
+    # TO DO
 
 })
 
-test_that("AM load - hist=FALSE without restatements", {
+test_that("AM load - restatements", {
 
     skip("restatements in dev")
+
+    # NO restatement hist=FALSE
+    # NO restatement hist=TRUE
+    # YES restatement hist=FALSE
+    # YES restatement hist=TRUE
 
     # attribute
 
@@ -301,7 +294,7 @@ test_that("AM load - hist=FALSE without restatements", {
     am$create(class = "attribute", anchor = "AC", mne = "NAM", desc = "Name", hist = TRUE, rest = FALSE)
     am$run()
 
-    # initial loading hits data
+    # initial loading hist data
     am$load(mapping = list(AC = list("code", NAM = c("name", hist = "date"))),
             data = data.table(code = 1L, name = "Mike", date = as.Date("2015-01-01")),
             meta = 1L)
@@ -334,6 +327,34 @@ test_that("AM load - hist=FALSE without restatements", {
 
 })
 
+test_that("AM load - auto IM", {
+
+    am <- AM$new()
+    am$create(class = "anchor", mne = "PR", desc = "Program")
+    am$create(class = "attribute", anchor = "PR", mne = "NAM", desc = "Name")
+    am$run()
+
+    # initial loading data, auto IM
+    am$load(mapping = list(PR = list("code", NAM = "name")),
+            data = data.table(code = 1L, name = "my program"),
+            meta = 1L)
+    expect_identical(am$process()$rows, rep(1L,2L), info = "loaded first row")
+    expect_equal(am$IM()$ID$PR, data.table(code = 1L, PR_ID = 1L, key = "code"), info = "auto IM after first insert")
+    # incremental loading new data, auto IM
+    am$load(mapping = list(PR = list("code", NAM = "name")),
+            data = data.table(code = 50L, name = "my another program"),
+            meta = 2L)
+    expect_identical(am$process()$rows, rep(2L,2L), info = "loaded second row")
+    expect_equal(am$IM()$ID$PR, data.table(code = c(1L,50L), PR_ID = 1:2, key = "code"), info = "auto IM after second insert")
+    # incremental loading same existing non historized data - should not be loaded
+    am$load(mapping = list(PR = list("code", NAM = "name")),
+            data = data.table(code = 50L, name = "my another program"),
+            meta = 3L)
+    expect_identical(am$process()$rows, rep(2L,2L), info = "loaded second row twice")
+    expect_equal(am$IM()$ID$PR, data.table(code = c(1L,50L), PR_ID = 1:2, key = "code"), info = "auto IM after second insert twice")
+
+})
+
 test_that("multiple AM instances loading including separation of IM instances", {
 
     am1 <- AM$new()
@@ -359,7 +380,7 @@ test_that("multiple AM instances loading including separation of IM instances", 
 
 })
 
-test_that("AM loading - technical exceptions scenarios", {
+test_that("AM load - technical exceptions scenarios", {
 
     # loading only anchor - no attributes etc
     am <- AM$new()
@@ -382,7 +403,7 @@ test_that("AM loading - technical exceptions scenarios", {
 
 })
 
-test_that("AM loading - data model validation failures", {
+test_that("AM load - data model validation failures", {
 
     am <- AM$new()
     am$create(class = "anchor", mne = "PR", desc = "Program")
@@ -405,5 +426,18 @@ test_that("AM loading - data model validation failures", {
     #     INSERT INTO dbo.lpr_program (pr_id, metadata_pr, pr_nam_pr_id, metadata_pr_nam, pr_nam_program_name) VALUES (1,1,1,1,'My program1');
     #     --ERROR:  duplicate key value violates unique constraint "pkpr_nam_program_name"
     #     --DETAIL:  Key (pr_nam_pr_id)=(1) already exists.
+
+    # missing hist to historized tie
+    am <- AM$new()
+    am$create(class = "anchor", mne = "PR", desc = "Program")
+    am$create(class = "anchor", mne = "ST", desc = "Stage")
+    am$create(class = "tie", anchors = c("PR","ST"), roles = c("isPlayed","at"), identifier = c(Inf,Inf), hist = TRUE)
+    am$run()
+    load_call <- quote(am$load(mapping = list(PR = list("prog_code"),
+                                              ST = list("stag_code"),
+                                              PR_ST = list()),
+                               data = data.table(prog_code = c(1:2,3L,3L), stag_code = c(1:2,2L,2L), date = as.Date("2015-07-03")+c(0:1,0:1)),
+                               meta = 1L))
+    expect_error(eval(load_call), "Some of the provided ties have incorrect definition versus model: PR_isPlayed_ST_at. Check if they are not missing `hist` column when defined in model as historized.", info = "missing hist to historized tie makes good error")
 
 })

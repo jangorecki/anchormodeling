@@ -33,7 +33,7 @@
       - [ ] tie
         - [x] static
         - [ ] knotted
-        - [ ] historized
+        - [x] historized
         - [ ] knotted historized
         - [ ] 3+ anchor ties
     - [x] unique names `length(names(data))==uniqueN(names(data))`

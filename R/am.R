@@ -185,12 +185,12 @@ AM <- R6Class(
                 stop(paste0("Invalid entity params provided"))
             } # src columns "" / NULL exists in data to load # apply over elements in the mapping and then over names of each attribute definition
             model_all_attr_codes_for_anchors <- setNames(self$read(anchors_mne)$childs, anchors_mne)
+            # check attributes - mapping vs model
             # key by hist and knot only for batch attributes match to model, by defined hist, knot, mne, anchor
             model_attrs_lkp <- quote(self$read(unique(unlist(model_all_attr_codes_for_anchors)))[, .(code, knot),, .(class, anchor, mne, hist)])
             # transform mapping to data.table
             mapping_attrs_dt <- rbindlist(lapply(anchors_mne, A.dt, mapping))
             setkeyv(mapping_attrs_dt, c("class","anchor","mne","hist"))
-            # first pass loop checks on composite key join
             mapping_attrs_dt[ eval(model_attrs_lkp), `:=`(code = i.code, knot = i.knot)]
             if(!"code" %chin% names(mapping_attrs_dt)){
                 mapping_attrs_dt[, `:=`(code = NA_character_, knot = NA_character_)]
@@ -198,6 +198,22 @@ AM <- R6Class(
             if(any(is.na(mapping_attrs_dt$code))){
                 stop(paste0("Some of the provided attributes have incorrect definition versus model: ", paste(mapping_attrs_dt[is.na(code), paste(anchor, mne, sep="_")], collapse=", "),". Check if they are not missing `hist` column when defined in model as historized."))
             } # all provided attributes in the mapping exists in model for those anchors, with expected hist and knot
+            # checks ties - mapping vs model - global `if` due to data.table#1207
+            if(length(ties_code) > 0L){
+                model_ties_lkp <- quote(self$read(ties_code)[, .(knot, anchors),, .(code, hist)])
+                mapping_ties_dt <- rbindlist(c(
+                    list(data.table(code = character(), src_col = character(), hist = logical(), knot = character(), hist_col = character())),
+                    lapply(ties_code, T.dt, mapping)
+                ))
+                setkeyv(mapping_ties_dt, c("code","hist"))
+                # bad data vs model: by code and hist
+                invalid_ties <- mapping_ties_dt[!eval(model_ties_lkp)]
+                if(nrow(invalid_ties) > 0L){
+                    stop(paste0("Some of the provided ties have incorrect definition versus model: ", paste(invalid_ties$code, collapse=", "),". Check if they are not missing `hist` column when defined in model as historized."))
+                } # all provided ties in the mapping exists in model for those anchors, with expected hist and knot
+            } else {
+                mapping_ties_dt <- data.table(code = character(), src_col = character(), hist = logical(), knot = character(), hist_col = character())
+            }
             # prepare sequence of processing
             load_seq <- rbindlist(list(
                 "anchor" = data.table(anchor = NA_character_, class = "anchor", mne = anchors_mne, code = anchors_mne, hist = FALSE, knot = NA_character_, src_col = paste(anchors_mne,"ID",sep="_"), hist_col = NA_character_),
@@ -206,10 +222,7 @@ AM <- R6Class(
                     "knot of tie" = self$read(ties_code)[!is.na(knot), .(anchor = NA_character_, class = "knot", mne = knot, code = knot, hist = FALSE, knot = NA_character_, src_col = NA_character_, hist_col = NA_character_), .(byknot = knot)][, unique(.SD), .SDcols=-"byknot"]
                 ))),
                 "attr" = mapping_attrs_dt[, .(anchor, class = rep("attribute",length(mne)), mne, code, hist, knot, src_col, hist_col)],
-                "tie" = rbindlist(c(
-                    list(data.table(code = character(), src_col = character(), hist = logical(), knot = character(), hist_col = character())),
-                    lapply(ties_code, T.dt, mapping)
-                ))[, .(anchor = rep(NA_character_,length(code)), class = rep("tie",length(code)), mne = rep(NA_character_,length(code)), code, hist, knot, src_col, hist_col)]
+                "tie" = mapping_ties_dt[, .(anchor = rep(NA_character_,length(code)), class = rep("tie",length(code)), mne = rep(NA_character_,length(code)), code, hist, knot, src_col, hist_col)]
             ))
             setkeyv(load_seq, c("class","anchor"))
             set2keyv(load_seq, "code")
@@ -282,6 +295,7 @@ AM <- R6Class(
                 src_cols <- c(src_cols, mapping[[tie_code]][["knot"]], mapping[[tie_code]][["hist"]])
                 cols <- self$OBJ(tie_code)$cols
                 cols <- cols[-length(cols)] # exclude metadata col
+                if(length(src_cols)!=length(cols)) browser()
                 self$OBJ(tie_code)$load(
                     data = data[, src_cols, with=FALSE][, setnames(.SD, src_cols, cols)],
                     meta = meta
