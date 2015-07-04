@@ -15,3 +15,4 @@
       - [x] union of shared knots in IM and ID returned for each of the source cols
 - [x] natural key / source column stored with ID data will be named after first definition of mnemonic
   - [x] dynamic name remapping available when `nk` provided
+- [x] natural key view query: am$IM()$ID[["AC"]]
