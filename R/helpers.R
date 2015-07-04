@@ -85,6 +85,8 @@ exclude.first <- function(x){
 
 now <- function(class = "POSIXct") switch(class, "POSIXct" = Sys.time(), "Date" = Sys.Date())
 
+nowchar <- function(class = "POSIXct") as.character(now(class=class))
+
 # mapping -----------------------------------------------------------------
 
 a <- function(src, knot, hist){

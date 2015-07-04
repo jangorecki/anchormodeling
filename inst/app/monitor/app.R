@@ -14,7 +14,9 @@ ui <- dashboardPage(
     dashboardBody(
         tabItems(
             tabItem(tabName = "am",
-                    fluidRow(DT::dataTableOutput("am"))
+                    fluidRow(DT::dataTableOutput("am")),
+                    fluidRow(downloadLink("export_xml", "Model XML")#, downloadLink("export_data", "Model data")
+                             )
             ),
             tabItem(tabName = "data",
                     fluidRow(
@@ -29,6 +31,16 @@ ui <- dashboardPage(
 server <- function(input, output) {
 
     output$am <- DT::renderDataTable(DT::datatable(AM()$process(pretty=TRUE), rownames=FALSE))
+
+    output$export_xml <- downloadHandler(
+        filename = function(){
+            format(Sys.time(),"AM_%Y%m%d_%H%M%S.xml")
+        },
+        content = function(file){
+            am$xml(file)
+        },
+        contentType = "text/xml"
+    )
 
     view <- reactive({
         validate(need(is.character(input$view), message = "Invalid view name"))
