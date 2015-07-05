@@ -388,6 +388,22 @@ AM <- R6Class(
             write(lines, file=file, append=FALSE)
             invisible(file)
         },
+        csv = function(dir = getwd()){
+            if(!self$validate()) stop("AM definition is invalid, see am$validate body for conditions")
+            tbls <- self$data[, name,, code]
+            csv.paths <- character()
+            for(cd in tbls$code){
+                csv.file <- paste0(tbls[cd, name], format(Sys.time(),"_%Y%m%d_%H%M%S.csv"))
+                write.table(x = self$OBJ(cd)$query(),
+                            file = file.path(dir, csv.file),
+                            append = FALSE,
+                            sep = ",",
+                            row.names = FALSE,
+                            col.names = TRUE)
+                csv.paths <- c(csv.paths, file.path(dir, csv.file))
+            }
+            invisible(csv.paths)
+        },
         dashboard = function(){
             if(!isTRUE(private$instance_run)) stop("Run DW instance by am$run()")
             suggests_deps <- c("shiny","shinydashboard","DT")
