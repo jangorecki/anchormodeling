@@ -21,35 +21,41 @@ actor_mapping <- list(AC = list("code",
                                 NAM = c("name", hist = "date"),
                                 GEN = "gender",
                                 PLV = c("level", hist = "date")))
+
+actor_data <- data.table(code = c("1", "2", "3", "4"),
+                         name = c("Mike", "Bob", "Alice", "Lee"),
+                         gender = c("M", "M", "F", "M"),
+                         level = c(4L, 1L, 3L, 4L),
+                         date = as.Date("2015-07-05"))
 am$load(mapping = actor_mapping,
-        data = data.table(code = c("1", "2", "3", "4"),
-                          name = c("Mike", "Bob", "Alice", "Lee"),
-                          gender = c("M", "M", "F", "M"),
-                          level = c(4L, 1L, 3L, 4L),
-                          date = as.Date("2015-07-05")),
+        data = actor_data,
         meta = 1L)
+
+actor_data <- data.table(code = c("1", "2", "3"),
+                         name = c("Mike", "Ben", "Alice"), # 1 name changed
+                         gender = c("M", "M", "F"),
+                         level = c(5L, 1L, 3L), # 1 level change
+                         date = as.Date("2015-07-06"))
 am$load(mapping = actor_mapping,
-        data = data.table(code = c("1", "2", "3"),
-                          name = c("Mike", "Ben", "Alice"), # 1 name changed
-                          gender = c("M", "M", "F"),
-                          level = c(5L, 1L, 3L), # 1 level change
-                          date = as.Date("2015-07-06")),
+        data = actor_data,
         meta = 2L)
 
 actor_program_mapping <- list(PR = list("prog_code"),
                               AC = list("acto_code"),
                               AC_PR_RAT = list(hist = "date", knot = "score"))
+actor_program_data <- data.table(prog_code = c(1:2,3L,3L),
+                                 acto_code = as.character(c(1:2,2L,2L)),
+                                 score = c("A","D","E","D"),
+                                 date = as.Date("2015-07-03")+c(0:1,0:1))
 am$load(mapping = actor_program_mapping,
-        data = data.table(prog_code = c(1:2,3L,3L),
-                          acto_code = as.character(c(1:2,2L,2L)),
-                          score = c("A","D","E","D"),
-                          date = as.Date("2015-07-03")+c(0:1,0:1)),
+        data = actor_program_data,
         meta = 3L)
 
 program_mapping <- list(PR = list("code",
                                   NAM = "name"))
+program_data <- data.table(code = 1:3, name = c("show1","show2","show3"))
 am$load(mapping = program_mapping,
-        data = data.table(code = 1:3, name = c("show1","show2","show3")),
+        data = program_data,
         meta = 4L)
 
 # dashboard ---------------------------------------------------------------

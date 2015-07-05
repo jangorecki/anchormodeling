@@ -6,4 +6,7 @@
   - [ ] knot values looked up
   - [ ] support various types of views
   - [ ] calendar picker for point-in-time view
-- [ ] etl logs
+- [x] etl logs section
+- [ ] cube section
+  - [ ] batch join 3nf
+  - [ ] remove surrogate keys
