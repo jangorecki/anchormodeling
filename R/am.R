@@ -237,7 +237,8 @@ AM <- R6Class(
                 nk <- lapply(mapping[anchors_mne],`[[`,1L)
                 knot_mne <- load_seq["knot", unique(mne), nomatch=0L]
                 if(length(knot_mne) > 0L){
-                    knot_mapping <- as.list(load_seq[knot==knot_mne, setNames(list(c(src_col)), knot_mne)])
+                    knot_mapping <- load_seq[knot %chin% knot_mne, list(src_cols = list(c(src_col))), knot]
+                    knot_mapping <- setNames(knot_mapping$src_cols, knot_mapping$knot)
                     if(any(sapply(knot_mapping, length0))) stop(paste0("knot not looked up, names: ", paste(names(knot_mapping)[sapply(knot_mapping, length0)], collapse=", ")))
                     nk <- c(nk, knot_mapping)
                 }
@@ -253,7 +254,7 @@ AM <- R6Class(
             } else stop ("Invalid meta argument")
             # loading knots
             lapply(load_seq["knot", code, nomatch=0L], function(knot_code){
-                src_cols <- load_seq[knot==knot_mne, c(src_col)]
+                src_cols <- load_seq[knot==knot_code, c(src_col)]
                 cols <- self$OBJ(knot_code)$cols
                 cols <- cols[-length(cols)] # exclude metadata col
                 if(length(src_cols)==1L){
