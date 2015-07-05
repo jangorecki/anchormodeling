@@ -1,7 +1,7 @@
 library(shinydashboard)
 
 AM <- function() getOption("am.share")
-if(!anchormodeling::is.AM(AM())) stop("you must use `monitor` function which sets reference for anchor model.")
+if(!anchormodeling::is.AM(AM())) stop("You must use `dashboard` method against your anchor model instance to start dashboard shiny application.")
 
 ui <- dashboardPage(
     dashboardHeader(title = "Anchor Modeling"),
