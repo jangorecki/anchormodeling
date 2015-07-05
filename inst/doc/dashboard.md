@@ -1,7 +1,9 @@
-- [ ] last load status on header bar
-  - [ ] total count of last load rows
 - [x] model overview
 - [x] download model xml
 - [ ] download model data
 - [x] 3nf views
-- [ ] low nf views: multiple select/checkbox for anchors of 3nf views to batch join
+  - [x] anchors 3nf, ties as is
+  - [ ] knot values looked up
+  - [ ] support various types of views
+  - [ ] calendar picker for point-in-time view
+- [ ] etl logs

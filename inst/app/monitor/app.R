@@ -20,7 +20,10 @@ ui <- dashboardPage(
             ),
             tabItem(tabName = "data",
                     fluidRow(
-                        selectInput("view", label = "3NF views", choices = am$read(class=c("anchor","tie"))[, setNames(code, name)]),
+                        selectInput("view",
+                                    label = "3NF views",
+                                    choices = list(Anchors = am$read(class="anchor")[, setNames(code, name)],
+                                                   Ties = am$read(class="tie")[, setNames(code, name)])),
                         DT::dataTableOutput("data")
                     )
             )
@@ -46,7 +49,7 @@ server <- function(input, output) {
         validate(need(is.character(input$view), message = "Invalid view name"))
         validate(need(input$view %in% am$read(class=c("anchor","tie"))$code, message = "Provided view name does not exists in the model"))
         validate(need(nrow(AM()$read(input$view)$obj[[1L]]$data) > 0L, message = paste("No data loaded for", input$view)))
-        AM()$read(input$view)$obj[[1L]]$data # use $view(input$view) when ready
+        AM()$view(input$view)
     })
 
     output$data <- DT::renderDataTable(DT::datatable(view(), rownames=FALSE))
