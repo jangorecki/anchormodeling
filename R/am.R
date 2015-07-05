@@ -166,7 +166,7 @@ AM <- R6Class(
                 tie_map_short_code <- not_anchors_mne[!not_anchors_mne %chin% ties_code]
                 tie_mapped <- self$read(class="tie")[,.(short_code = paste_(c(unlist(anchors), na.omit(knot)))), code][,.SD,, short_code][tie_map_short_code, .(code), .EACHI, nomatch=NA_character_]
                 if(tie_mapped[is.na(code), .N > 0L]){
-                    stop(paste0("Following short code of tie was not able to map to any tie:",tie_mapped[is.na(code), paste(tie_mapped, short_code=", ")],". See am print method for defined entities and provide tie code."))
+                    stop(paste0("Following short code of tie was not able to map to any tie: ",tie_mapped[is.na(code), paste(short_code,collapse=", ")],". See am print method for defined entities and provide tie code."))
                 }
                 names(mapping)[names(mapping) == tie_map_short_code] <- tie_mapped[tie_map_short_code, code] # mapping elements renamed
                 ties_code <- unique(c(ties_code, tie_mapped$code)) # all ties remapped to unique codes
@@ -211,6 +211,11 @@ AM <- R6Class(
                 if(nrow(invalid_ties) > 0L){
                     stop(paste0("Some of the provided ties have incorrect definition versus model: ", paste(invalid_ties$code, collapse=", "),". Check if they are not missing `hist` column when defined in model as historized."))
                 } # all provided ties in the mapping exists in model for those anchors, with expected hist and knot
+                mapping_ties_dt[, knot := NULL # remove NA knot, workaround for data.table#1166
+                                ][ eval(model_ties_lkp), `:=`(knot = i.knot)]
+                if(!"knot" %chin% names(mapping_ties_dt)){
+                    mapping_ties_dt[, `:=`(knot = NA_character_)]
+                } # workaround for data.table#1166
             } else {
                 mapping_ties_dt <- data.table(code = character(), src_col = character(), hist = logical(), knot = character(), hist_col = character())
             }
@@ -233,6 +238,7 @@ AM <- R6Class(
                 knot_mne <- load_seq["knot", unique(mne), nomatch=0L]
                 if(length(knot_mne) > 0L){
                     knot_mapping <- as.list(load_seq[knot==knot_mne, setNames(list(c(src_col)), knot_mne)])
+                    if(any(sapply(knot_mapping, length0))) stop(paste0("knot not looked up, names: ", paste(names(knot_mapping)[sapply(knot_mapping, length0)], collapse=", ")))
                     nk <- c(nk, knot_mapping)
                 }
                 data <- self$im$use(data, mne = names(nk), nk = nk, in.place = FALSE)
@@ -292,10 +298,9 @@ AM <- R6Class(
             lapply(load_seq["tie", code, nomatch=0L], function(tie_code){
                 if(!all(self$OBJ(tie_code)$anchors %chin% names(mapping))) stop(paste0("Cannot load tie ",tie_code," without loading anchors for it, missing anchor in load: ",paste(self$OBJ(tie_code)$anchors[!self$OBJ(tie_code)$anchors %chin% names(mapping)], collapse=", "),"."), call. = FALSE)
                 src_cols <- paste0(names(mapping)[names(mapping) %chin% self$OBJ(tie_code)$anchors], "_ID")
-                src_cols <- c(src_cols, mapping[[tie_code]][["knot"]], mapping[[tie_code]][["hist"]])
+                src_cols <- c(src_cols, load_seq[code==tie_code, c(if(is.na(knot)) character() else paste_(mapping[[tie_code]][["knot"]], knot,"ID"), if(hist) mapping[[tie_code]][["hist"]] else character())])
                 cols <- self$OBJ(tie_code)$cols
                 cols <- cols[-length(cols)] # exclude metadata col
-                if(length(src_cols)!=length(cols)) browser()
                 self$OBJ(tie_code)$load(
                     data = data[, src_cols, with=FALSE][, setnames(.SD, src_cols, cols)],
                     meta = meta

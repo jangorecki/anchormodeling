@@ -87,6 +87,8 @@ now <- function(class = "POSIXct") switch(class, "POSIXct" = Sys.time(), "Date" 
 
 nowchar <- function(class = "POSIXct") as.character(now(class=class))
 
+length0 <- function(x) length(x)==0L
+
 # mapping -----------------------------------------------------------------
 
 a <- function(src, knot, hist){

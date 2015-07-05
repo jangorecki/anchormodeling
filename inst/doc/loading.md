@@ -14,11 +14,11 @@
     - [x] as easy as lapply
     - [ ] make it parallel
 - [ ] loading process
-  - [ ] two pass: detailed validation in first loop
+  - [x] batch model vs data validation
   - [ ] AM$load
     - [ ] loading of entities
       - [x] anchor
-      - [ ] attribute
+      - [x] attribute
         - [x] static
         - [x] knotted
           - [x] dynamic shared knots
@@ -26,15 +26,18 @@
         - [x] knotted historized
       - [ ] knot
         - [x] static of attributes
-        - [ ] static of ties
+        - [x] historoized of attributes
+        - [x] static of ties
+        - [x] historized of ties
         - [x] shared knots of attributes
         - [ ] shared knots of ties
         - [ ] shared knots of attribute and tie
       - [ ] tie
         - [x] static
-        - [ ] knotted
+        - [x] knotted
         - [x] historized
-        - [ ] knotted historized
+        - [x] knotted historized
+        - [ ] self ties
         - [ ] 3+ anchor ties
     - [x] unique names `length(names(data))==uniqueN(names(data))`
     - [x] model-mapping validation

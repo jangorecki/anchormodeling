@@ -247,7 +247,10 @@ test_that("AM load - ties tests", {
                            PE_PR = list()),
             data = data.table(perf_code = 1L, prog_code = c(1L,50L)),
             meta = 1L)
-    expect_equal(am$OBJ("PE_at_PR_wasPlayed")$data, data.table(PE_ID_at = rep(1L,2), PR_ID_wasPlayed = 1:2, Metadata_PE_at_PR_wasPlayed = rep(1L,2), key = c("PE_ID_at","PR_ID_wasPlayed")), info = "static tie as expected")
+    expect_equal(am$OBJ("PE_at_PR_wasPlayed")$data,
+                 data.table(PE_ID_at = rep(1L,2), PR_ID_wasPlayed = 1:2, Metadata_PE_at_PR_wasPlayed = rep(1L,2),
+                            key = c("PE_ID_at","PR_ID_wasPlayed")),
+                 info = "static tie as expected")
 
     # evolve model: new static tie
     am$create(class = "anchor", mne = "AC", desc = "Actor")
@@ -258,7 +261,10 @@ test_that("AM load - ties tests", {
                            AC_PE = list()),
             data = data.table(perf_code = c(1:2,2L), acto_code = c(1L,1:2)),
             meta = 2L)
-    expect_equal(am$OBJ("AC_wasCasted_PE_in")$data, data.table(AC_ID_wasCasted = c(1:2,2L), PE_ID_in = c(1L,1:2), Metadata_AC_wasCasted_PE_in = rep(2L,3), key = c("AC_ID_wasCasted","PE_ID_in")), info = "static tie evolution as expected")
+    expect_equal(am$OBJ("AC_wasCasted_PE_in")$data,
+                 data.table(AC_ID_wasCasted = c(1:2,2L), PE_ID_in = c(1L,1:2), Metadata_AC_wasCasted_PE_in = rep(2L,3),
+                            key = c("AC_ID_wasCasted","PE_ID_in")),
+                 info = "static tie evolution as expected")
 
     # evolve model: new historized tie
     am$create(class = "anchor", mne = "ST", desc = "Stage")
@@ -269,12 +275,50 @@ test_that("AM load - ties tests", {
                            PR_ST = list(hist = "date")),
             data = data.table(prog_code = c(1:2,3L,3L), stag_code = c(1:2,2L,2L), date = as.Date("2015-07-03")+c(0:1,0:1)),
             meta = 3L)
-    expect_equal(am$OBJ("PR_isPlayed_ST_at")$data, data.table(PR_ID_isPlayed = c(1L,3:4,4L), ST_ID_at = c(1:2,2L,2L), PR_isPlayed_ST_at_ChangedAt = as.Date("2015-07-03")+c(0:1,0:1), Metadata_PR_isPlayed_ST_at = rep(3L,4), key = c("PR_ID_isPlayed","ST_ID_at","PR_isPlayed_ST_at_ChangedAt")), info = "historized tie evolution as expected")
+    expect_equal(am$OBJ("PR_isPlayed_ST_at")$data,
+                 data.table(PR_ID_isPlayed = c(1L,3:4,4L), ST_ID_at = c(1:2,2L,2L), PR_isPlayed_ST_at_ChangedAt = as.Date("2015-07-03")+c(0:1,0:1), Metadata_PR_isPlayed_ST_at = rep(3L,4),
+                            key = c("PR_ID_isPlayed","ST_ID_at","PR_isPlayed_ST_at_ChangedAt")),
+                 info = "historized tie evolution as expected")
 
     # evolve model: new knotted historized tie
     am$create(class = "knot", mne = "RAT", desc = "Rating")
     am$create(class = "tie", anchors = c("AC","PR"), knot = "RAT", roles = c("part","in","got"), identifier = c(Inf,Inf,1), hist = TRUE)
-    # TO DO
+    am$run()
+    am$load(mapping = list(PR = list("prog_code"),
+                           AC = list("acto_code"),
+                           AC_PR_RAT = list(hist = "date", knot = "score")),
+            data = data.table(prog_code = c(1:2,3L,3L), acto_code = c(1:2,2L,2L), score = c("A","D","E","D"), date = as.Date("2015-07-03")+c(0:1,0:1)),
+            meta = 4L)
+    expect_equal(am$OBJ("AC_part_PR_in_RAT_got")$data,
+                 data.table(AC_ID_part = c(1L,3:4,4L), PR_ID_in = c(1:2,2L,2L), RAT_ID_got = c(1L,2L,3L,2L), AC_part_PR_in_RAT_got_ChangedAt = as.Date("2015-07-03")+c(0:1,0:1), Metadata_AC_part_PR_in_RAT_got = rep(4L,4),
+                            key = c("AC_ID_part","PR_ID_in","AC_part_PR_in_RAT_got_ChangedAt")),
+                 info = "knotted historized tie evolution as expected")
+
+    # evolve model: new static knotted tie
+    am$create(class = "knot", mne = "FIP", desc = "FirstPlay")
+    am$create(class = "tie", anchors = c("AC","ST"), knot = "FIP", roles = c("firstPlayed","at","on"), identifier = c(Inf,Inf,1))
+    am$run()
+    am$load(mapping = list(ST = list("stag_code"),
+                           AC = list("acto_code"),
+                           AC_ST_FIP = list(knot = "date")),
+            data = data.table(stag_code = c(1:2,2:3), acto_code = c(1L,1:2,2L), date = as.Date("2015-07-03")+c(0:1,0:1)),
+            meta = 5L)
+    expect_equal(am$OBJ("AC_firstPlayed_ST_at_FIP_on")$data,
+                 data.table(AC_ID_firstPlayed = c(1:2,2:3), ST_ID_at = c(1L,1:2,2L), FIP_ID_on = c(1:2,1:2), Metadata_AC_firstPlayed_ST_at_FIP_on = rep(5L,4),
+                            key = c("AC_ID_firstPlayed","ST_ID_at")),
+                 info = "knotted static tie evolution as expected")
+
+    # evolve model: new static knotted self tie - as AC_parent_AC_child_PAT_parentalType from example model
+    # am$create(class = "tie", anchors = c("AC","AC"), knot = "PAT", roles = c("parent","child","parentalType"), identifier = c(Inf,Inf,Inf))
+    # am$run()
+    # am$load(mapping = list(AC = list("acto_code"),
+    #                        AC_AC = list(knot = "")),
+    #         data = data.table(perf_code = c(1:2,2L), acto_code = c(1L,1:2)),
+    #         meta = 5L)
+    # expect_equal(am$OBJ("AC_parent_AC_child_PAT_parentalType")$data,
+    #              data.table(AC_ID_parent = c(1:2,2L), AC_ID_child = c(1L,1:2), Metadata_AC_parent_AC_child_PAT_parentalType = rep(5L,3),
+    #                         key = c("AC_ID_parent","AC_ID_child")),
+    #              info = "static knotted self tie evolution as expected")
 
 })
 
@@ -439,5 +483,17 @@ test_that("AM load - data model validation failures", {
                                data = data.table(prog_code = c(1:2,3L,3L), stag_code = c(1:2,2L,2L), date = as.Date("2015-07-03")+c(0:1,0:1)),
                                meta = 1L))
     expect_error(eval(load_call), "Some of the provided ties have incorrect definition versus model: PR_isPlayed_ST_at. Check if they are not missing `hist` column when defined in model as historized.", info = "missing hist to historized tie makes good error")
+
+    # missing knot to knotted historized tie
+    am$create(class = "anchor", mne = "AC", desc = "Actor")
+    am$create(class = "knot", mne = "RAT", desc = "Rating")
+    am$create(class = "tie", anchors = c("AC","PR"), knot = "RAT", roles = c("part","in","got"), identifier = c(Inf,Inf,1), hist = TRUE)
+    am$run()
+    load_call <- quote(am$load(mapping = list(PR = list("prog_code"),
+                                              AC = list("acto_code"),
+                                              AC_PR = list(hist = "date", knot = "score")),
+                               data = data.table(prog_code = c(1:2,3L,3L), acto_code = c(1:2,2L,2L), score = c("A","D","E","D"), date = as.Date("2015-07-03")+c(0:1,0:1)),
+                               meta = 2L))
+    expect_error(eval(load_call), "Following short code of tie was not able to map to any tie: AC_PR. See am print method for defined entities and provide tie code.", info = "missing knot to knotted historized tie makes good error")
 
 })
