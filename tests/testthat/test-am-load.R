@@ -422,18 +422,15 @@ test_that("AM load - ties tests", {
     #                         key = c("AC_ID_parent","AC_ID_child")),
     #              info = "static knotted self tie evolution as expected")
 
+    # evolve model: 3 way tie - as PR_content_ST_location_PE_of
+
 })
 
 test_that("AM load - restatements", {
 
     skip("restatements in dev")
 
-    # NO restatement hist=FALSE
-    # NO restatement hist=TRUE
-    # YES restatement hist=FALSE
-    # YES restatement hist=TRUE
-
-    # attribute
+    # attribute rest=TRUE
 
     am <- AM$new()
     am$create(class = "anchor", mne = "AC", desc = "Actor")
@@ -463,13 +460,16 @@ test_that("AM load - restatements", {
                  info = "historized duplicates on PK silently ignored")
 
     # incremental loading new hist data but with same value as previous/next value - because of restatement = FALSE they should not be loaded
+    # to do
 
-    # tie
+    # attribute rest=FALSE
+    # to do
 
-    am$create(class = "anchor", mne = "PR", desc = "Program")
-    am$create(class = "tie", anchors = c("AC","PR"), roles = c("part","in"), identifier = c(Inf,Inf,1), knot = "RAT", rest = FALSE)
-    am$create(class = "knot", mne = "RAT", desc = "Rating")
-    am$run()
+    # tie rest=TRUE
+    # to do
+
+    # tie rest=FALSE
+    # to do
 
 })
 

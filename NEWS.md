@@ -7,6 +7,7 @@
 - [x] wider use cases tests coverage for loading and IM
 - [x] loading ties
 - [x] dynamically shared knots
+- [x] extract AM data to multiple csv
 - [ ] load/view supports shared knots
 - [ ] load/view supports 2+ role ties
 
