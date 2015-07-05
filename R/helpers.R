@@ -89,6 +89,10 @@ nowchar <- function(class = "POSIXct") as.character(now(class=class))
 
 length0 <- function(x) length(x)==0L
 
+try_nanotime <- function(){
+    if(requireNamespace("microbenchmark", quietly=TRUE)) microbenchmark::get_nanotime() else proc.time()[[3L]]
+}
+
 # mapping -----------------------------------------------------------------
 
 a <- function(src, knot, hist){

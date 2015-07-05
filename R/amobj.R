@@ -43,7 +43,7 @@ AMobj <- R6Class(
         },
         load = function(data, meta){
             stopifnot(is.data.table(data))
-            ts <- if(requireNamespace("microbenchmark", quietly=TRUE)) microbenchmark::get_nanotime() else proc.time()[[3L]]
+            ts <- try_nanotime()
             in_nrow <- nrow(data)
             Sys.sleep(0.001) # just to make timestamp better sortable, requires setNumericRounding(1)
             if(in_nrow == 0L){
