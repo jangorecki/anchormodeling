@@ -1,6 +1,7 @@
 - [x] model overview
 - [x] download model xml
-- [ ] download model data
+- [x] download model data
+- [x] download model binary
 - [x] 3nf views
   - [x] anchors 3nf, ties as is
   - [ ] knot values looked up

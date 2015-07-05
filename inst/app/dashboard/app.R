@@ -5,6 +5,8 @@ library(DT)
 AM <- function() getOption("am.share")
 if(!anchormodeling::is.AM(AM())) stop("You must use `dashboard` method against your anchor model instance to start dashboard shiny application.")
 
+# ui ----------------------------------------------------------------------
+
 ui <- dashboardPage(
     dashboardHeader(title = "Anchor Modeling"),
     dashboardSidebar(
@@ -20,7 +22,8 @@ ui <- dashboardPage(
             tabItem(tabName = "am",
                     fluidRow(DT::dataTableOutput("am")),
                     fluidRow(downloadLink("export_xml", "Model XML")),
-                    fluidRow(downloadLink("export_csv", "Model data"))
+                    fluidRow(downloadLink("export_csv", "Model data csv")),
+                    fluidRow(downloadLink("export_am", "AM instance binary"))
             ),
             tabItem(tabName = "data",
                     fluidRow(
@@ -48,16 +51,34 @@ ui <- dashboardPage(
     )
 )
 
+# server ------------------------------------------------------------------
+
 server <- function(input, output) {
 
+    # sidebar elements
+
     output$am <- DT::renderDataTable(DT::datatable(AM()$process(pretty=TRUE), rownames=FALSE))
+
+    view <- reactive({
+        validate(need(is.character(input$view), message = "Invalid view name"))
+        validate(need(input$view %in% am$read(class=c("anchor","tie"))$code, message = "Provided view name does not exists in the model"))
+        validate(need(nrow(AM()$read(input$view)$obj[[1L]]$data) > 0L, message = paste("No data loaded for", input$view)))
+        AM()$view(input$view)
+    })
+    output$data <- DT::renderDataTable(DT::datatable(view(), rownames=FALSE))
+
+    output$cube <- DT::renderDataTable(DT::datatable(data.table(to_do = "to do"), rownames=FALSE))
+
+    output$etl <- DT::renderDataTable(DT::datatable(AM()$etl[nchar(src) > 20L, src := paste0(substr(src,1,20),"...")], rownames=FALSE))
+
+    # download helpers
 
     output$export_xml <- downloadHandler(
         filename = function(){
             format(Sys.time(),"AM_%Y%m%d_%H%M%S.xml")
         },
         content = function(file){
-            am$xml(file)
+            AM()$xml(file)
         },
         contentType = "text/xml"
     )
@@ -66,26 +87,28 @@ server <- function(input, output) {
             format(Sys.time(),"AM_%Y%m%d_%H%M%S.tar")
         },
         content = function(file){
-            #csv.files <- AM()$csv() # TO DO
-            csv.files <- character()
-            tar(file, files = csv.files, compression='gzip')
+            am <- AM()
+            csv.paths <- am$csv(dir = tempdir())
+            tar(file, files = csv.paths, compression="gzip", tar="tar")
+            file.remove(csv.paths)
         },
         contentType = "application/x-tar"
     )
-
-    view <- reactive({
-        validate(need(is.character(input$view), message = "Invalid view name"))
-        validate(need(input$view %in% am$read(class=c("anchor","tie"))$code, message = "Provided view name does not exists in the model"))
-        validate(need(nrow(AM()$read(input$view)$obj[[1L]]$data) > 0L, message = paste("No data loaded for", input$view)))
-        AM()$view(input$view)
-    })
-
-    output$data <- DT::renderDataTable(DT::datatable(view(), rownames=FALSE))
-
-    output$cube <- DT::renderDataTable(DT::datatable(data.table(to_do = "to do"), rownames=FALSE))
-
-    output$etl <- DT::renderDataTable(DT::datatable(AM()$etl[nchar(src) > 20L, src := paste0(substr(src,1,20),"...")], rownames=FALSE))
+    output$export_am <- downloadHandler(
+        filename = function(){
+            format(Sys.time(),"AM_%Y%m%d_%H%M%S.RData")
+        },
+        content = function(file){
+            am <- AM()
+            am$stop()
+            save(am, file = file)
+            am$run()
+        },
+        contentType = "application/octet-stream"
+    )
 
 }
+
+# shinyApp ----------------------------------------------------------------
 
 shinyApp(ui, server)
