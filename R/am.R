@@ -395,7 +395,7 @@ AM <- R6Class(
                 stop(paste0("install required packages: ",paste(suggests_deps[!sapply(suggests_deps, requireNamespace, quietly=TRUE)], collapse=", ")))
             } else {
                 options("am.share" = self)
-                shiny::runApp(system.file("app","monitor", package = "anchormodeling"))
+                shiny::runApp(system.file("app", "dashboard", package = "anchormodeling"))
             }
             invisible(self)
         },
