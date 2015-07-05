@@ -168,7 +168,7 @@ AM <- R6Class(
                 if(tie_mapped[is.na(code), .N > 0L]){
                     stop(paste0("Following short code of tie was not able to map to any tie: ",tie_mapped[is.na(code), paste(short_code,collapse=", ")],". See am print method for defined entities and provide tie code."))
                 }
-                names(mapping)[names(mapping) == tie_map_short_code] <- tie_mapped[tie_map_short_code, code] # mapping elements renamed
+                names(mapping)[names(mapping) %chin% tie_map_short_code] <- tie_mapped[tie_map_short_code, code] # mapping elements renamed
                 ties_code <- unique(c(ties_code, tie_mapped$code)) # all ties remapped to unique codes
             }
             # general processing

@@ -308,6 +308,108 @@ test_that("AM load - ties tests", {
                             key = c("AC_ID_firstPlayed","ST_ID_at")),
                  info = "knotted static tie evolution as expected")
 
+    # evolve model: 2 historized ties to single shared knot
+    am <- AM$new()
+    am$create(class = "anchor", mne = "PE", desc = "Person")
+    am$create(class = "anchor", mne = "RA", desc = "Rel1")
+    am$create(class = "anchor", mne = "RB", desc = "Rel2")
+    am$create(class = "knot", mne = "UTL", desc = "Utilization")
+    am$create(class = "tie", anchors = c("PE","RA"), knot = "UTL", roles = c("was","at","gets"), identifier = c(Inf,Inf,1), hist = TRUE)
+    am$create(class = "tie", anchors = c("PE","RB"), knot = "UTL", roles = c("was","at","gets"), identifier = c(Inf,Inf,1), hist = TRUE)
+    am$run()
+    am$load(mapping = list(PE = list("person_code"),
+                           RA = list("rel1_code"),
+                           RB = list("rel2_code"),
+                           PE_RA_UTL = list(hist = "rel1_date", knot = "rel1_rate"),
+                           PE_RB_UTL = list(hist = "rel2_date", knot = "rel2_rate")),
+            data = data.table(person_code = c(1L,1:2,2L),
+                              rel1_code = c(1:2,2L,2L),
+                              rel1_rate = c("2","2+","2","3-"),
+                              rel1_date = as.Date("2015-07-05")+c(0L,0L,0:1),
+                              rel2_code = c(1:2,2L,2L),
+                              rel2_rate = c("4","2+","3","2+"),
+                              rel2_date = as.Date("2015-07-05")+c(0L,0L,0:1)),
+            meta = 1L)
+    expect_equal(am$OBJ("PE_was_RA_at_UTL_gets")$query(),
+                 data.table(PE_ID_was = c(1L,1:2,2L),
+                            RA_ID_at = c(1:2,2L,2L),
+                            UTL_ID_gets = c(1:2,1L,3L),
+                            PE_was_RA_at_UTL_gets_ChangedAt = as.Date("2015-07-05")+c(0L,0L,0:1),
+                            Metadata_PE_was_RA_at_UTL_gets = rep(1L,4),
+                            key = c("PE_ID_was","RA_ID_at","PE_was_RA_at_UTL_gets_ChangedAt")),
+                 info = "shared knot to two hist ties: first tie")
+    expect_equal(am$OBJ("PE_was_RB_at_UTL_gets")$query(),
+                 data.table(PE_ID_was = c(1L,1:2,2L),
+                            RB_ID_at = c(1:2,2L,2L),
+                            UTL_ID_gets = c(4L,2L,5L,2L),
+                            PE_was_RB_at_UTL_gets_ChangedAt = as.Date("2015-07-05")+c(0L,0L,0:1),
+                            Metadata_PE_was_RB_at_UTL_gets = rep(1L,4),
+                            key = c("PE_ID_was","RB_ID_at","PE_was_RB_at_UTL_gets_ChangedAt")),
+                 info = "shared knot to two hist ties: second tie")
+    expect_equal(am$OBJ("UTL")$query(),
+                 data.table(UTL_ID = 1:5,
+                            UTL_Utilization = c("2","2+","3-","4","3"),
+                            Metadata_UTL = rep(1L,5),
+                            key = "UTL_ID"),
+                 info = "shared knot to two hist ties: knot")
+
+    # same but incrementally changed knot from regular to shared
+    am <- AM$new()
+    am$create(class = "anchor", mne = "PE", desc = "Person")
+    am$create(class = "anchor", mne = "RA", desc = "Rel1")
+    am$create(class = "knot", mne = "UTL", desc = "Utilization")
+    am$create(class = "tie", anchors = c("PE","RA"), knot = "UTL", roles = c("was","at","gets"), identifier = c(Inf,Inf,1), hist = TRUE)
+    am$run()
+    am$load(mapping = list(PE = list("person_code"),
+                           RA = list("rel1_code"),
+                           PE_RA_UTL = list(hist = "rel1_date", knot = "rel1_rate")),
+            data = data.table(person_code = c(1L,1:2,2L),
+                              rel1_code = c(1:2,2L,2L),
+                              rel1_rate = c("2","2+","2","3-"),
+                              rel1_date = as.Date("2015-07-05")+c(0L,0L,0:1)),
+            meta = 1L)
+    expect_equal(am$OBJ("PE_was_RA_at_UTL_gets")$query(),
+                 data.table(PE_ID_was = c(1L,1:2,2L),
+                            RA_ID_at = c(1:2,2L,2L),
+                            UTL_ID_gets = c(1:2,1L,3L),
+                            PE_was_RA_at_UTL_gets_ChangedAt = as.Date("2015-07-05")+c(0L,0L,0:1),
+                            Metadata_PE_was_RA_at_UTL_gets = rep(1L,4),
+                            key = c("PE_ID_was","RA_ID_at","PE_was_RA_at_UTL_gets_ChangedAt")),
+                 info = "dynamically shared knot to two hist ties: first load, first tie")
+    expect_equal(am$OBJ("UTL")$query(),
+                 data.table(UTL_ID = 1:3,
+                            UTL_Utilization = c("2","2+","3-"),
+                            Metadata_UTL = rep(1L,3),
+                            key = "UTL_ID"),
+                 info = "dynamically shared knot to two hist ties: first load, knot")
+
+    # increment model to add tie making knot shared
+    am$create(class = "anchor", mne = "RB", desc = "Rel2")
+    am$create(class = "tie", anchors = c("PE","RB"), knot = "UTL", roles = c("was","at","gets"), identifier = c(Inf,Inf,1), hist = TRUE)
+    am$run()
+    am$load(mapping = list(PE = list("person_code"),
+                           RB = list("rel2_code"),
+                           PE_RB_UTL = list(hist = "rel2_date", knot = "rel2_rate")),
+            data = data.table(person_code = c(1L,1:2,2L),
+                              rel2_code = c(1:2,2L,2L),
+                              rel2_rate = c("4","2+","3","2+"),
+                              rel2_date = as.Date("2015-07-05")+c(0L,0L,0:1)),
+            meta = 2L)
+    expect_equal(am$OBJ("PE_was_RB_at_UTL_gets")$query(),
+                 data.table(PE_ID_was = c(1L,1:2,2L),
+                            RB_ID_at = c(1:2,2L,2L),
+                            UTL_ID_gets = c(4L,2L,5L,2L),
+                            PE_was_RB_at_UTL_gets_ChangedAt = as.Date("2015-07-05")+c(0L,0L,0:1),
+                            Metadata_PE_was_RB_at_UTL_gets = rep(2L,4),
+                            key = c("PE_ID_was","RB_ID_at","PE_was_RB_at_UTL_gets_ChangedAt")),
+                 info = "dynamically shared knot to two hist ties: second load, second tie")
+    expect_equal(am$OBJ("UTL")$query(),
+                 data.table(UTL_ID = 1:5,
+                            UTL_Utilization = c("2","2+","3-","4","3"),
+                            Metadata_UTL = c(1L,1L,1:2,2L),
+                            key = "UTL_ID"),
+                 info = "dynamically shared knot to two hist ties: second load, knot")
+
     # evolve model: new static knotted self tie - as AC_parent_AC_child_PAT_parentalType from example model
     # am$create(class = "tie", anchors = c("AC","AC"), knot = "PAT", roles = c("parent","child","parentalType"), identifier = c(Inf,Inf,Inf))
     # am$run()

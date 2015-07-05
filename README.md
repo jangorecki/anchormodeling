@@ -10,18 +10,18 @@
 
 Anchor Modeling Data Warehouse instance supported features:  
 
-- [ ] unitemporal
+- [x] unitemporal
 - [ ] views: current, last, point-in-time, difference
 - [ ] restatement/idempotency
-- [ ] dynamically shared knots
+- [x] dynamically shared knots
 - [ ] 2+ role ties
-- [ ] high level ui
-  - [ ] map source columns to AM entities
-  - [ ] auto identitiy management for anchors and knots
-  - [ ] auto loading knots
-  - [ ] auto metadata stamping
-  - [ ] query 3NF views
-  - [ ] anchor model and etl overview dashboard in shiny
+- [x] high level ui
+  - map source columns to AM entities
+  - auto identitiy management for anchors and knots
+  - auto loading knots
+  - auto metadata stamping
+  - query 3NF views
+  - anchor model and etl overview dashboard in shiny
 
 ## Installation
 

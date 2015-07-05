@@ -1,5 +1,6 @@
 library(data.table)
 library(R6)
+library(shiny)
 library(devtools)
 library(testthat)
 #library(anchormodeling)

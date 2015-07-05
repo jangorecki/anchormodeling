@@ -11,8 +11,7 @@
     - [x] write new rows to IM
     - [x] include just im$use()
   - [x] isolate single anchor loading: model processing of single anchor load as atomic operation
-    - [x] as easy as lapply
-    - [ ] make it parallel
+    - [x] as easy as lapply - easy parallel in future
 - [ ] loading process
   - [x] batch model vs data validation
   - [ ] AM$load
@@ -21,7 +20,6 @@
       - [x] attribute
         - [x] static
         - [x] knotted
-          - [x] dynamic shared knots
         - [x] historized
         - [x] knotted historized
       - [ ] knot
@@ -30,7 +28,9 @@
         - [x] static of ties
         - [x] historized of ties
         - [x] shared knots of attributes
-        - [ ] shared knots of ties
+          - [x] dynamic shared knots
+        - [x] shared knots of ties
+          - [x] dynamic shared knots
         - [ ] shared knots of attribute and tie
       - [ ] tie
         - [x] static
@@ -38,7 +38,7 @@
         - [x] historized
         - [x] knotted historized
         - [ ] self ties
-        - [ ] 3+ anchor ties
+        - [ ] 2+ anchor ties
     - [x] unique names `length(names(data))==uniqueN(names(data))`
     - [x] model-mapping validation
       - [x] multiple *exists*/*valid* checks

@@ -4,8 +4,9 @@
 - [x] dynamic remap columns for auto-im
 - [x] naming convention passed to IM
 - [x] extended IM to handle Identities for shared knots
-- [ ] wider use cases tests coverage for loading and IM
-- [ ] loading ties
+- [x] wider use cases tests coverage for loading and IM
+- [x] loading ties
+- [x] dynamically shared knots
 - [ ] load/view supports shared knots
 - [ ] load/view supports 2+ role ties
 
