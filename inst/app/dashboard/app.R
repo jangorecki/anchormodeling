@@ -1,4 +1,6 @@
+library(shiny)
 library(shinydashboard)
+library(DT)
 
 AM <- function() getOption("am.share")
 if(!anchormodeling::is.AM(AM())) stop("You must use `dashboard` method against your anchor model instance to start dashboard shiny application.")

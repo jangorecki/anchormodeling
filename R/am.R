@@ -392,7 +392,7 @@ AM <- R6Class(
             if(!isTRUE(private$instance_run)) stop("Run DW instance by am$run()")
             suggests_deps <- c("shiny","shinydashboard","DT")
             if(!all(sapply(suggests_deps, requireNamespace, quietly=TRUE))){
-                stop(paste0("install required packages: ",paste(suggests_deps[!sapply(suggests_deps, requireNamespace, quietly=TRUE)], collapse=", ")))
+                stop(paste0("Dashboard shiny web application requires install required packages: ",paste(suggests_deps[!sapply(suggests_deps, requireNamespace, quietly=TRUE)], collapse=", "),".\nAll available on CRAN by `install.packages(...)`."))
             } else {
                 options("am.share" = self)
                 shiny::runApp(system.file("app", "dashboard", package = "anchormodeling"))
