@@ -6,4 +6,6 @@
 
     setNumericRounding(1) # to correct order by 0.001 timestamps
 
+    options("datatable.auto.index" = FALSE) # prevent unwanted indexes
+
 }
