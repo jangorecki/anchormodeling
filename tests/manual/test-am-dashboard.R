@@ -10,9 +10,9 @@ am$create("knot", mne = "GEN", desc = "Gender")
 am$create("attribute", anchor = "AC", mne = "PLV", desc = "ProfessionalLevel", knot = "PLV", hist = TRUE)
 am$create("knot", mne = "PLV", desc = "ProfessionalLevel")
 am$create("anchor", mne = "PR", desc = "Program")
-am$create("attribute", anchor = "PR", mne = "NAM", desc = "Name")
 am$create(class = "knot", mne = "RAT", desc = "Rating")
 am$create(class = "tie", anchors = c("AC","PR"), knot = "RAT", roles = c("part","in","got"), identifier = c(Inf,Inf,1), hist = TRUE)
+am$create("attribute", anchor = "PR", mne = "NAM", desc = "Name")
 am$run()
 
 # data --------------------------------------------------------------------
