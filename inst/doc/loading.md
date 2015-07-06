@@ -38,7 +38,8 @@
         - [x] historized
         - [x] knotted historized
         - [ ] self ties
-        - [ ] 2+ anchor ties
+        - [ ] '2+ anchor' ties
+        - [ ] '1+ knot' ties
     - [x] unique names `length(names(data))==uniqueN(names(data))`
     - [x] model-mapping validation
       - [x] multiple *exists*/*valid* checks
