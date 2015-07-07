@@ -1,9 +1,15 @@
 library(shiny)
 library(shinydashboard)
 library(DT)
+library(data.table)
+library(anchormodeling)
 
 AM <- function() getOption("am.share")
-if(!anchormodeling::is.AM(AM())) stop("You must use `dashboard` method against your anchor model instance to start dashboard shiny application.")
+if(!anchormodeling:::is.AM(AM())){
+    warning("You should use `dashboard` method against your anchor model instance. Loading application with dummy data.",  immediate. = TRUE, call. = FALSE)
+    am <- anchormodeling:::dashboard_dummy_data()
+    options("am.share" = am)
+}
 
 # ui ----------------------------------------------------------------------
 
@@ -29,8 +35,8 @@ ui <- dashboardPage(
                     fluidRow(
                         selectInput("view",
                                     label = "3NF views",
-                                    choices = list(Anchors = am$read(class="anchor")[, setNames(code, name)],
-                                                   Ties = am$read(class="tie")[, setNames(code, name)])),
+                                    choices = list(Anchors = AM()$read(class="anchor")[, setNames(code, name)],
+                                                   Ties = AM()$read(class="tie")[, setNames(code, name)])),
                         DT::dataTableOutput("data")
                     )
             ),
@@ -38,8 +44,8 @@ ui <- dashboardPage(
                     fluidRow(
                         selectInput("cube_tbls",
                                     label = "Cube views",
-                                    choices = list(Anchors = am$read(class="anchor")[, setNames(code, name)],
-                                                   Ties = am$read(class="tie")[, setNames(code, name)]),
+                                    choices = list(Anchors = AM()$read(class="anchor")[, setNames(code, name)],
+                                                   Ties = AM()$read(class="tie")[, setNames(code, name)]),
                                     multiple = TRUE),
                         DT::dataTableOutput("cube")
                     )),
@@ -61,7 +67,7 @@ server <- function(input, output) {
 
     view <- reactive({
         validate(need(is.character(input$view), message = "Invalid view name"))
-        validate(need(input$view %in% am$read(class=c("anchor","tie"))$code, message = "Provided view name does not exists in the model"))
+        validate(need(input$view %in% AM()$read(class=c("anchor","tie"))$code, message = "Provided view name does not exists in the model"))
         validate(need(nrow(AM()$read(input$view)$obj[[1L]]$data) > 0L, message = paste("No data loaded for", input$view)))
         AM()$view(input$view)
     })
