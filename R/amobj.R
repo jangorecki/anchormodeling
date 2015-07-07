@@ -14,6 +14,8 @@ AMobj <- R6Class(
         data = data.table(),
         cols = character(),
         keys = character(),
+        colorder = integer(),
+        coltypes = character(),
         initialize = function() invisible(self),
         insert = function(data, db = FALSE){
             if(nrow(data) == 0L) return(invisible(self))
@@ -24,16 +26,20 @@ AMobj <- R6Class(
             if(db){
                 stop("db backend not implemented")
             }
-            if(missing(type) || !isTRUE(self$hist)) return(self$data)
-            # hist=TRUE
-            stopifnot(is.character(type))
-            query <- switch(type,
-                            "latest" = quote(self$data[, tail(.SD, 1L), by=c(exclude.last(self$keys))]),
-                            "timepoint" = quote(self$data[eval(as.name(last(self$keys))) <= timepoint, tail(.SD, 1L), by=c(exclude.last(self$keys))]),
-                            "current" = quote(self$data[eval(as.name(last(self$keys))) <= now(class1(eval(as.name(last(self$keys))))), tail(.SD, 1L), by=c(exclude.last(self$keys))]),
-                            "difference" = quote(self$data[eval(as.name(last(self$keys))) %between% timepoint])
-            )
-            eval(query)
+            if(length(self$data)==0L){ # no data loaded yet
+                query <- quote(setkeyv(setnames(setDT(rep(list(integer()), length(self$cols))), self$cols), self$keys))
+            } else if(missing(type) || !isTRUE(self$hist)){
+                query <- quote(self$data)
+            } else if(isTRUE(self$hist)){
+                stopifnot(is.character(type))
+                query <- switch(type,
+                                "latest" = quote(self$data[, tail(.SD, 1L), by=c(exclude.last(self$keys))]),
+                                "timepoint" = quote(self$data[eval(as.name(last(self$keys))) <= timepoint, tail(.SD, 1L), by=c(exclude.last(self$keys))]),
+                                "current" = quote(self$data[eval(as.name(last(self$keys))) <= now(class1(eval(as.name(last(self$keys))))), tail(.SD, 1L), by=c(exclude.last(self$keys))]),
+                                "difference" = quote(self$data[eval(as.name(last(self$keys))) %between% timepoint])
+                )
+            } # hist=TRUE
+            eval(query)[]
         },
         nrow = function(db = FALSE){
             if(!db) nrow(self$data) else NA_integer_ # as.integer(dbGetQuery(conn, paste0("SELECT COUNT(*) AS cnt FROM ",self$name,";"))$cnt)[1L]
@@ -57,7 +63,7 @@ AMobj <- R6Class(
             # check if first time used
             if(self$nrow() > 0){
                 # check data types
-                stopifnot(identical(self$types(), sapply(data, class1)))
+                stopifnot(identical(unname(self$types()), unname(sapply(data, class1))))
                 # check if no violation of PK and values for static attribute/tie
                 if(identical(self$hist,FALSE)){ # can be TRUE only for attrs or ties
                     value_col <- self$cols[!self$cols %chin% self$keys][1L]
@@ -115,6 +121,8 @@ anchor <- R6Class(
             self$name <- paste_(self$mne, self$desc) # AC_Actor
             self$cols <- c(paste_(self$mne,"ID"), paste_("Metadata", self$mne)) # AC_ID, Metadata_AC
             self$keys <- self$cols[1L]
+            self$colorder <- setNames(1:2,self$cols)
+            self$coltypes <- setNames(c("ID","meta"),self$cols)
             invisible(self)
         },
         print = function(){
@@ -167,6 +175,8 @@ attribute <- R6Class(
                 paste_("Metadata", self$anchor, self$mne) # Metadata_AC_NAM
             )
             self$keys <- if(self$hist) c(self$cols[1L], self$cols[3L]) else self$cols[1L]
+            self$colorder <- setNames(c(1L, length(self$cols), if(self$hist) length(self$cols)-1L, 2L),self$cols)
+            self$coltypes <- setNames(c("ID", "meta", if(self$hist) "hist", "data"),self$cols)
             invisible(self)
         },
         print = function(){
@@ -214,6 +224,8 @@ tie <- R6Class(
                 paste_("Metadata", self$name) # Metadata_AC_exclusive_AC_with
             )
             self$keys <- c(self$cols[seq_along(self$anchors)], if(self$hist) self$cols[length(c(self$anchors,self$knot))+1L] else character())
+            self$colorder <- setNames(c(length(self$cols), if(self$hist) length(self$cols)-1L, seq_along(c(self$anchors, self$knot))),self$cols)
+            self$coltypes <- setNames(c("meta", if(self$hist) "hist", rep("ID",length(c(self$anchors, self$knot)))),self$cols)
             invisible(self)
         },
         print = function(){
@@ -255,6 +267,8 @@ knot <- R6Class(
                 paste_("Metadata", self$mne) # Metadata_GEN
             )
             self$keys <- self$cols[1L]
+            self$colorder <- setNames(c(2L, 3L, 1L),self$cols)
+            self$coltypes <- setNames(c("data", "meta", "ID"),self$cols)
             invisible(self)
         },
         print = function(){

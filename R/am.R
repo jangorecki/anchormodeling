@@ -312,32 +312,26 @@ AM <- R6Class(
         OBJ = function(code) self$read(code)$obj[[1L]],
         joinv = function(master, join, allow.cartesian){
             # simplified jangorecki/dwtools::joinbyv
-            # basic input check: master and join
-            stopifnot(all(!missing(master),!missing(join))) # non missing mandatory args
-            if(!is.data.table(master)) master <- master[[1]] # conver master list(DT) to DT
-            stopifnot(
-                is.data.table(master),
-                !is.data.table(join),
-                is.list(join),
-                haskey(master),
-                all(sapply(join, haskey))
-            )
+            stopifnot(!missing(master), !missing(join), is.data.table(master), !is.data.table(join), is.list(join), haskey(master))
+            if(length(join)==0L) return(master)
+            stopifnot(all(sapply(join, haskey)))
             # for non-difference view exec main loop with lookups, also difference views where all anchor attributes are non historized
             if(!allow.cartesian){
-                master <- copy(master)
+                master <- copy(master) # avoid copy master in the loop by lookup column and add by reference `:=`
                 for(i in 1:length(join)){
                     # faster way thanks to: http://stackoverflow.com/questions/30468455/dynamically-build-call-for-lookup-multiple-columns
-                    lkp_cols <- names(join[[i]])[-1L]
+                    lkp_cols <- names(join[[i]])
                     master[join[[i]], c(lkp_cols) := mget(paste0('i.', lkp_cols))]
-                    # old slower:
-                    # master <- join[[i]][master, allow.cartesian = allow.cartesian][, setnames(.SD,names(join[[i]])[1L],names(master)[1L])]
                 }
             }
             # for difference view exec lookup distinct id-time, union and then use as master and rolling to joins
             if(allow.cartesian){
-                master <- unique(rbindlist(lapply(join, function(join) if(length(key(join)) == 2L) join[, unique(.SD), .SDcols = c(key(join))])))
-                setkeyv(master, names(master))
                 browser()
+                # to do
+                master <- unique(rbindlist(
+                    lapply(join, function(join) if(length(key(join)) == 2L) join[, unique(.SD), .SDcols = c(key(join))])
+                ))
+                setkeyv(master, names(master))
                 for(i in 1:length(join)){
                     # TO DO add roll join as substitute of LATERAL JOIN
                     master <- join[[i]][master, allow.cartesian = allow.cartesian][, setnames(.SD,names(join[[i]])[1L],names(master)[1L])]
@@ -345,34 +339,58 @@ AM <- R6Class(
             }
             master
         },
-        view = function(mne, type = "current", timepoint){
-            stopifnot(mne %chin% self$read(class=c("anchor","tie"))$mne, type %chin% c("latest","timepoint","current","difference"))
-            if(mne %chin% self$read(class="tie")$mne) return(self$OBJ(mne)$query(type = type, timepoint = timepoint)) # TO DO knot lookup and filterNA?
-            # denormalize to 3NF
-            childs <- self$read(mne)$childs[[1L]]
-            if(length(childs)==0L) return(self$OBJ(mne)$query())
-            childs.knotted <- self$read(childs)[, code[sapply(knot, isTRUE)]]
-            childs.historized <- self$read(childs)[, code[sapply(hist, isTRUE)]]
-            filterNA <- function(x, cols){
-                if(missing(cols) || length(cols)==0) x else x[!(x[, .(`.na` = all(is.na(.SD))), seq_len(nrow(x)), .SDcols = c(cols)]$.na)]
-            } # filter out NA on particular columns - used for historized attributes to filter out future static data when querying past
-            filterNA(self$joinv(
-                master = self$OBJ(mne)$query(),
-                join = lapply(childs, function(child){
-                    # this will automatically lookup knots to attributes which are knotted
-                    if(child %chin% childs.knotted){
-                        knot <- self$read(child)$knot
-                        knot_data <- quote(self$OBJ(knot)$query())
-                        attr_data <- quote(self$OBJ(child)$query(type = type, timepoint = timepoint)[,.SD,,keyby = c(self$OBJ(knot)$keys)])
-                        eval(knot_data)[eval(attr_data)
-                                        ][,.SD,,keyby = c(self$OBJ(child)$keys)
-                                          ] # rename knots to prefix attributes! # TO DO TEST
-                    } else {
-                        self$OBJ(child)$query(type = type, timepoint = timepoint)
-                    }
-                }),
-                allow.cartesian = (length(childs.historized) > 0L) && isTRUE(type=="difference") # only 'difference' views can explode rows excluding non historized
-            ), cols = if(length(childs.historized)) self$read(childs.historized)[, sapply(obj, function(obj) obj$cols[2L])])
+        view = function(code, type = "current", timepoint = NULL){
+            stopifnot(code %chin% self$read(class=c("anchor","tie"))$code, type %chin% c("latest","timepoint","current","difference"))
+            if(self$read(code)$class=="tie"){
+                tie_code <- code
+                tie_colorder <- self$OBJ(tie_code)$cols[self$OBJ(tie_code)$colorder]
+                tie_data <- quote(self$OBJ(tie_code)$query(type = type, timepoint = timepoint))
+                knot_code <- self$read(tie_code)$knot
+                res_data <- if(is.na(knot_code)){
+                    eval(tie_data)[, .SD, .SDcols = c(tie_colorder)]
+                } else {
+                    knot_colorder <- self$OBJ(knot_code)$cols[self$OBJ(knot_code)$colorder]
+                    knot_data <- quote(self$OBJ(knot_code)$query())
+                    knot_role <- self$OBJ(tie_code)$roles[length(self$OBJ(tie_code)$roles)]
+                    knot_cols <- paste0(knot_role, "_", self$OBJ(knot_code)$cols)
+                    knot_key <- paste0(knot_role, "_", c(self$OBJ(knot_code)$keys))
+                    colorder <- c(tie_colorder[-length(tie_colorder)], paste0(knot_role, "_", knot_colorder)[-length(knot_colorder)], tie_colorder[length(tie_colorder)])
+                    setnames(eval(knot_data), knot_cols)[i = eval(tie_data)[,.SD,, keyby = c(knot_key)], nomatch = NA
+                                                         ][, .SD,, keyby = c(self$OBJ(tie_code)$keys)
+                                                           ][, .SD, .SDcols = c(colorder)]
+                } # lkp knot
+            } else { # anchor
+                anchor_code <- code
+                anchor_data <- quote(self$OBJ(anchor_code)$query())
+                childs_code <- self$read(anchor_code)$childs[[1L]]
+                res_data <- if(length(childs_code)==0L) eval(anchor_data) else {
+                    childs.knotted <- self$read(childs_code)[!is.na(knot), setNames(knot, code)]
+                    childs.historized <- self$read(childs_code)[!sapply(hist, is.na), code]
+                    attr_data <- quote(self$OBJ(attr_code)$query(type = type, timepoint = timepoint))
+                    self$joinv(
+                        master = eval(anchor_data),
+                        join = lapply(childs_code, function(attr_code){
+                            attr_colorder <- self$OBJ(attr_code)$cols[self$OBJ(attr_code)$colorder]
+                            # this will automatically lookup knots to attributes which are knotted and prefix with am entity code
+                            if(attr_code %chin% names(childs.knotted)){
+                                knot_code <- childs.knotted[[attr_code]]
+                                knot_cols <- paste0(attr_code, "_", self$OBJ(knot_code)$cols)
+                                knot_key <- paste0(attr_code, "_", c(self$OBJ(knot_code)$keys))
+                                knot_data <- quote(self$OBJ(knot_code)$query())
+                                knot_colorder <- self$OBJ(knot_code)$cols[self$OBJ(knot_code)$colorder]
+                                colorder <- c(attr_colorder[-length(attr_colorder)], paste0(attr_code, "_", knot_colorder)[-length(knot_colorder)], attr_colorder[length(attr_colorder)])
+                                setnames(eval(knot_data), knot_cols)[i = eval(attr_data)[,.SD,, keyby = c(knot_key)], nomatch=NA
+                                                                     ][, .SD,, keyby = c(self$OBJ(attr_code)$keys)
+                                                                       ][, .SD, .SDcols = c(colorder)]
+                            } else {
+                                eval(attr_data)[, .SD, .SDcols = c(attr_colorder)]
+                            }
+                        }), # auto knot lookup nested here
+                        allow.cartesian = isTRUE(type=="difference") && isTRUE(length(childs.historized) > 1L) # 'difference' views can explode rows on multiple historized attributes
+                    )
+                }
+            } # anchor
+            res_data[]
         },
         xml = function(file = format(Sys.time(),"AM_%Y%m%d_%H%M%S.xml")){
             if(!self$validate()) stop("AM definition is invalid, see am$validate body for conditions")
