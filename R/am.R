@@ -406,20 +406,34 @@ AM <- R6Class(
             write(lines, file=file, append=FALSE)
             invisible(file)
         },
-        csv = function(dir = getwd()){
+        csv = function(dir = getwd(), nf = 6L){
             if(!self$validate()) stop("AM definition is invalid, see am$validate body for conditions")
-            tbls <- self$data[, name,, code]
             csv.paths <- character()
-            for(cd in tbls$code){
-                csv.file <- paste0(tbls[cd, name], format(Sys.time(),"_%Y%m%d_%H%M%S.csv"))
-                write.table(x = self$OBJ(cd)$query(),
-                            file = file.path(dir, csv.file),
-                            append = FALSE,
-                            sep = ",",
-                            row.names = FALSE,
-                            col.names = TRUE)
-                csv.paths <- c(csv.paths, file.path(dir, csv.file))
-            }
+            if(nf==6L){
+                tbls <- self$data[, name,, code]
+                for(cd in tbls$code){
+                    csv.file <- paste0("AM_csv_6NF_", tbls[cd, name], format(Sys.time(),"_%Y%m%d_%H%M%S.csv"))
+                    write.table(x = self$OBJ(cd)$query(),
+                                file = file.path(dir, csv.file),
+                                append = FALSE,
+                                sep = ",",
+                                row.names = FALSE,
+                                col.names = TRUE)
+                    csv.paths <- c(csv.paths, file.path(dir, csv.file))
+                }
+            } else if(nf==3L){
+                tbls <- self$data[class%chin%c("anchor","tie"), name,, code]
+                for(cd in tbls$code){
+                    csv.file <- paste0("AM_csv_3NF_", tbls[cd, name], format(Sys.time(),"_%Y%m%d_%H%M%S.csv"))
+                    write.table(x = self$view(cd),
+                                file = file.path(dir, csv.file),
+                                append = FALSE,
+                                sep = ",",
+                                row.names = FALSE,
+                                col.names = TRUE)
+                    csv.paths <- c(csv.paths, file.path(dir, csv.file))
+                }
+            } else stop("invalid `nf` argument, accepted 6L and 3L")
             invisible(csv.paths)
         },
         dashboard = function(){

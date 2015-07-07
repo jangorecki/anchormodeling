@@ -28,7 +28,8 @@ ui <- dashboardPage(
             tabItem(tabName = "am",
                     fluidRow(DT::dataTableOutput("am")),
                     fluidRow(downloadLink("export_xml", "Model XML")),
-                    fluidRow(downloadLink("export_csv", "Model data csv")),
+                    fluidRow(downloadLink("export_csv_3nf", "Model 3NF data csv")),
+                    fluidRow(downloadLink("export_csv_6nf", "Model 6NF data csv")),
                     fluidRow(downloadLink("export_am", "AM instance binary"))
             ),
             tabItem(tabName = "data",
@@ -88,13 +89,25 @@ server <- function(input, output) {
         },
         contentType = "text/xml"
     )
-    output$export_csv <- downloadHandler(
+    output$export_csv_3nf <- downloadHandler(
         filename = function(){
-            format(Sys.time(),"AM_%Y%m%d_%H%M%S.tar")
+            format(Sys.time(),"AM_csv_3NF_%Y%m%d_%H%M%S.tar")
         },
         content = function(file){
             am <- AM()
-            csv.paths <- am$csv(dir = tempdir())
+            csv.paths <- am$csv(dir = tempdir(), nf = 3L)
+            tar(file, files = csv.paths, compression="gzip", tar="tar")
+            file.remove(csv.paths)
+        },
+        contentType = "application/x-tar"
+    )
+    output$export_csv_6nf <- downloadHandler(
+        filename = function(){
+            format(Sys.time(),"AM_csv_6NF_%Y%m%d_%H%M%S.tar")
+        },
+        content = function(file){
+            am <- AM()
+            csv.paths <- am$csv(dir = tempdir(), nf = 6L)
             tar(file, files = csv.paths, compression="gzip", tar="tar")
             file.remove(csv.paths)
         },
