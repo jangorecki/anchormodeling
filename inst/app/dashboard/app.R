@@ -65,11 +65,11 @@ server <- function(input, output) {
         validate(need(nrow(AM()$read(input$view)$obj[[1L]]$data) > 0L, message = paste("No data loaded for", input$view)))
         AM()$view(input$view)
     })
-    output$data <- DT::renderDataTable(DT::datatable(view(), rownames=FALSE))
+    output$data <- DT::renderDataTable(DT::datatable(view(), rownames=FALSE, options = list(scrollX = TRUE)))
 
-    output$cube <- DT::renderDataTable(DT::datatable(data.table(to_do = "to do"), rownames=FALSE))
+    output$cube <- DT::renderDataTable(DT::datatable(data.table(to_do = "to do"), rownames=FALSE, options = list(scrollX = TRUE)))
 
-    output$etl <- DT::renderDataTable(DT::datatable(AM()$etl[nchar(src) > 20L, src := paste0(substr(src,1,20),"...")], rownames=FALSE))
+    output$etl <- DT::renderDataTable(DT::datatable(AM()$etl[nchar(src) > 20L, src := paste0(substr(src,1,20),"...")], rownames=FALSE, options = list(scrollX = TRUE)))
 
     # download helpers
 

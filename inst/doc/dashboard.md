@@ -4,7 +4,7 @@
 - [x] download model binary
 - [x] 3nf views
   - [x] anchors 3nf, ties as is
-  - [ ] knot values looked up
+  - [x] knot values looked up
   - [ ] support various types of views
   - [ ] calendar picker for point-in-time view
 - [x] etl logs section
