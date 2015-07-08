@@ -1,4 +1,4 @@
-# anchormodeling 0.3.9
+# anchormodeling 0.4
 
 - [x] reorganized AM load method
 - [x] dynamic remap columns for auto-im

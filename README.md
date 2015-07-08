@@ -1,6 +1,6 @@
 # Anchor Modeling [![Build Status](https://travis-ci.org/jangorecki/anchormodeling.svg?branch=master)](https://travis-ci.org/jangorecki/anchormodeling)
 
-**Current version:** [0.3.9](NEWS.md)  
+**Current version:** [0.4](NEWS.md)  
 
 - [x] Anchor Model metadata manager
 - [x] Export model to XML loadable in [Anchor Modeler](https://roenbaeck.github.io/anchor/)
@@ -30,6 +30,8 @@ For configuring fresh linux environment see [Setup Guide](inst/doc/setup.md).
 
 ```r
 library(devtools)
+## install manually if you don't have rpivotTable:
+#install_github("smartinsightsfromdata/rpivotTable")
 install_github("jangorecki/anchormodeling")
 ```
 
