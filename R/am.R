@@ -344,10 +344,12 @@ AM <- R6Class(
             if(self$read(code)$class=="tie"){
                 tie_code <- code
                 tie_colorder <- self$OBJ(tie_code)$cols[self$OBJ(tie_code)$colorder]
+                tie_coltypes <- self$OBJ(tie_code)$coltypes[self$OBJ(tie_code)$colorder]
                 tie_data <- quote(self$OBJ(tie_code)$query(type = type, timepoint = timepoint))
                 knot_code <- self$read(tie_code)$knot
-                res_data <- if(is.na(knot_code)){
-                    eval(tie_data)[, .SD, .SDcols = c(tie_colorder)]
+                if(is.na(knot_code)){
+                    coltypes <- tie_coltypes
+                    res_data <- eval(tie_data)[, .SD, .SDcols = c(tie_colorder)]
                 } else {
                     knot_colorder <- self$OBJ(knot_code)$cols[self$OBJ(knot_code)$colorder]
                     knot_data <- quote(self$OBJ(knot_code)$query())
@@ -355,19 +357,26 @@ AM <- R6Class(
                     knot_cols <- paste0(knot_role, "_", self$OBJ(knot_code)$cols)
                     knot_key <- paste0(knot_role, "_", c(self$OBJ(knot_code)$keys))
                     colorder <- c(tie_colorder[-length(tie_colorder)], paste0(knot_role, "_", knot_colorder)[-length(knot_colorder)], tie_colorder[length(tie_colorder)])
-                    setnames(eval(knot_data), knot_cols)[i = eval(tie_data)[,.SD,, keyby = c(knot_key)], nomatch = NA
-                                                         ][, .SD,, keyby = c(self$OBJ(tie_code)$keys)
-                                                           ][, .SD, .SDcols = c(colorder)]
+                    knot_coltypes <- setNames(self$OBJ(knot_code)$coltypes, paste0(knot_role, "_", knot_colorder))
+                    coltypes <- c(tie_coltypes[-length(tie_coltypes)], knot_coltypes[-length(knot_coltypes)], tie_coltypes[length(tie_coltypes)])
+                    res_data <- setnames(eval(knot_data), knot_cols)[i = eval(tie_data)[,.SD,, keyby = c(knot_key)], nomatch = NA
+                                                                     ][, .SD,, keyby = c(self$OBJ(tie_code)$keys)
+                                                                       ][, .SD, .SDcols = c(colorder)]
                 } # lkp knot
             } else { # anchor
                 anchor_code <- code
                 anchor_data <- quote(self$OBJ(anchor_code)$query())
+                anchor_colorder <- self$OBJ(anchor_code)$cols[self$OBJ(anchor_code)$colorder]
+                anchor_coltypes <- self$OBJ(anchor_code)$coltypes[self$OBJ(anchor_code)$colorder]
                 childs_code <- self$read(anchor_code)$childs[[1L]]
-                res_data <- if(length(childs_code)==0L) eval(anchor_data) else {
+                if(length(childs_code)==0L){
+                    coltypes <- anchor_coltypes
+                    res_data <- eval(anchor_data)
+                } else {
                     childs.knotted <- self$read(childs_code)[!is.na(knot), setNames(knot, code)]
                     childs.historized <- self$read(childs_code)[!sapply(hist, is.na), code]
                     attr_data <- quote(self$OBJ(attr_code)$query(type = type, timepoint = timepoint))
-                    self$joinv(
+                    res_data <- self$joinv(
                         master = eval(anchor_data),
                         join = lapply(childs_code, function(attr_code){
                             attr_colorder <- self$OBJ(attr_code)$cols[self$OBJ(attr_code)$colorder]
@@ -388,9 +397,23 @@ AM <- R6Class(
                         }), # auto knot lookup nested here
                         allow.cartesian = isTRUE(type=="difference") && isTRUE(length(childs.historized) > 1L) # 'difference' views can explode rows on multiple historized attributes
                     )
+                    attr_coltypes <- unlist(lapply(childs_code, function(attr_code){
+                        attr_colorder <- self$OBJ(attr_code)$cols[self$OBJ(attr_code)$colorder]
+                        attr_coltypes <- self$OBJ(attr_code)$coltypes
+                        if(attr_code %chin% names(childs.knotted)){
+                            knot_code <- childs.knotted[[attr_code]]
+                            knot_colorder <- self$OBJ(knot_code)$cols[self$OBJ(knot_code)$colorder]
+                            knot_coltypes <- setNames(self$OBJ(knot_code)$coltypes, paste0(attr_code, "_", knot_colorder))
+                            c(attr_coltypes[-length(attr_coltypes)], knot_coltypes[-length(knot_coltypes)], attr_coltypes[length(attr_coltypes)])
+                        } else {
+                            attr_coltypes
+                        }
+                    }))
+                    coltypes <- c(anchor_coltypes, attr_coltypes)
+                    if(!identical(names(coltypes), names(res_data))) browser() # check why names not identical
                 }
             } # anchor
-            res_data[]
+            setattr(temporal_filter(res_data, cols = names(coltypes)[coltypes=="hist"]),"coltypes",coltypes)[] # filter only when cols not empty
         },
         xml = function(file = format(Sys.time(),"AM_%Y%m%d_%H%M%S.xml")){
             if(!self$validate()) stop("AM definition is invalid, see am$validate body for conditions")
@@ -479,4 +502,3 @@ AM <- R6Class(
         } # wrapper for faster adding AM objects: am$add$A(mne = "AC", desc = "Actor")
     )
 )
-

@@ -122,7 +122,7 @@ anchor <- R6Class(
             self$cols <- c(paste_(self$mne,"ID"), paste_("Metadata", self$mne)) # AC_ID, Metadata_AC
             self$keys <- self$cols[1L]
             self$colorder <- setNames(1:2,self$cols)
-            self$coltypes <- setNames(c("ID","meta"),self$cols)
+            self$coltypes <- setNames(c("ID","meta"),self$cols[self$colorder])
             invisible(self)
         },
         print = function(){
@@ -176,7 +176,7 @@ attribute <- R6Class(
             )
             self$keys <- if(self$hist) c(self$cols[1L], self$cols[3L]) else self$cols[1L]
             self$colorder <- setNames(c(1L, length(self$cols), if(self$hist) length(self$cols)-1L, 2L),self$cols)
-            self$coltypes <- setNames(c("ID", "meta", if(self$hist) "hist", "data"),self$cols)
+            self$coltypes <- setNames(c("ID", "meta", if(self$hist) "hist", if(length(self$knot)) "ID" else "data"),self$cols[self$colorder])
             invisible(self)
         },
         print = function(){
@@ -225,7 +225,7 @@ tie <- R6Class(
             )
             self$keys <- c(self$cols[seq_along(self$anchors)], if(self$hist) self$cols[length(c(self$anchors,self$knot))+1L] else character())
             self$colorder <- setNames(c(length(self$cols), if(self$hist) length(self$cols)-1L, seq_along(c(self$anchors, self$knot))),self$cols)
-            self$coltypes <- setNames(c("meta", if(self$hist) "hist", rep("ID",length(c(self$anchors, self$knot)))),self$cols)
+            self$coltypes <- setNames(c("meta", if(self$hist) "hist", rep("ID",length(c(self$anchors, self$knot)))),self$cols[self$colorder])
             invisible(self)
         },
         print = function(){
@@ -268,7 +268,7 @@ knot <- R6Class(
             )
             self$keys <- self$cols[1L]
             self$colorder <- setNames(c(2L, 3L, 1L),self$cols)
-            self$coltypes <- setNames(c("data", "meta", "ID"),self$cols)
+            self$coltypes <- setNames(c("data", "meta", "ID"),self$cols[self$colorder])
             invisible(self)
         },
         print = function(){

@@ -17,6 +17,7 @@ test_that("AM view cases", {
             meta = 1L)
     expect_equal(am$view("AC"),
                  data.table(AC_ID = 1L, Metadata_AC = 1L, key = "AC_ID"),
+                 check.attributes = FALSE,
                  info = "currenct view AC anchor only, step 1")
 
     am$create("attribute", anchor = "AC", mne = "NAM", desc = "Name", hist = TRUE)$run()
@@ -26,6 +27,7 @@ test_that("AM view cases", {
             meta = 2L)
     expect_equal(am$view("AC"),
                  data.table(AC_ID = 1:2, Metadata_AC = 1:2, AC_NAM_AC_ID = 1:2, Metadata_AC_NAM = c(2L,2L), AC_NAM_ChangedAt = as.Date("2015-07-05")[rep(1,2)], AC_NAM_Actor_Name = c("Mike","Bob"), key = "AC_ID"),
+                 check.attributes = FALSE,
                  info = "currenct view AC + NAM, step 2")
 
     am$create("attribute", anchor = "AC", mne = "GEN", desc = "Gender", knot = "GEN")
@@ -48,6 +50,7 @@ test_that("AM view cases", {
                             AC_NAM_ChangedAt = as.Date("2015-07-05")[rep(1,3)],
                             AC_NAM_Actor_Name = c("Mike","Bob","Alice"),
                             key = "AC_ID"),
+                 check.attributes = FALSE,
                  info = "currenct view AC + NAM + GEN, step 3")
 
     am$create("attribute", anchor = "AC", mne = "PLV", desc = "ProfessionalLevel", knot = "PLV", hist = TRUE)
@@ -77,6 +80,7 @@ test_that("AM view cases", {
                             AC_PLV_Metadata_PLV = c(NA, NA, 4L, 4L),
                             AC_PLV_PLV_ID = c(NA, NA, 1L, 2L),
                             key = "AC_ID"),
+                 check.attributes = FALSE,
                  info = "currenct view AC + NAM + GEN + PLV, step 4")
 
     am$create("anchor", mne = "PR", desc = "Program")
@@ -92,6 +96,7 @@ test_that("AM view cases", {
             meta = 5L)
     expect_equal(names(am$view("AC_part_PR_in_RAT_got")),
                  c("Metadata_AC_part_PR_in_RAT_got","AC_part_PR_in_RAT_got_ChangedAt","AC_ID_part","PR_ID_in","got_RAT_Rating","got_Metadata_RAT","RAT_ID_got"),
+                 check.attributes = FALSE,
                  info = "currenct view AC_part_PR_in_RAT_got valid column and order, step 5")
     expect_equal(am$view("AC_part_PR_in_RAT_got"),
                  data.table(Metadata_AC_part_PR_in_RAT_got = c(5L, 5L, 5L),
@@ -102,6 +107,7 @@ test_that("AM view cases", {
                             got_Metadata_RAT = c(5L, 5L, 5L),
                             RAT_ID_got = c(1L, 2L, 2L),
                             key = c("AC_ID_part", "PR_ID_in", "AC_part_PR_in_RAT_got_ChangedAt")),
+                 check.attributes = FALSE,
                  info = "currenct view AC_part_PR_in_RAT_got data, step 5")
 
     am$create("attribute", anchor = "PR", mne = "NAM", desc = "Name")$run()
@@ -116,6 +122,55 @@ test_that("AM view cases", {
                             Metadata_PR_NAM = c(6L, 6L, 6L),
                             PR_NAM_Program_Name = c("show1", "show2", "show3"),
                             key = "PR_ID"),
+                 check.attributes = FALSE,
                  info = "currenct view PR + NAM, step 6")
+
+})
+
+test_that("AM_temporal_filter", {
+
+    if(Sys.Date() >= as.Date("2115-07-05")) skip("test invalid after 2115-07-05")
+
+    actor_data <- data.table(code = c("1", "2", "3", "4"),
+                             name = c("Mike", "Bob", "Alice", "Lee"),
+                             gender = c("M", "M", "F", "M"),
+                             level = c(4L, 1L, 3L, 4L),
+                             uni_date = c(as.Date("2015-07-05")+0:1,as.Date("2115-07-05")+0:1),
+                             name_date = c(as.Date("2015-07-05")+0:1,as.Date("2115-07-05")+0:1),
+                             level_date = c(as.Date("2015-07-05"),as.Date("2115-07-05"),as.Date("2015-07-06"),as.Date("2115-07-06")))
+
+    am <- AM$new()
+    am$create("anchor", mne = "AC", desc = "Actor")
+    am$create("attribute", anchor = "AC", mne = "NAM", desc = "Name", hist = TRUE)
+    am$create("attribute", anchor = "AC", mne = "GEN", desc = "Gender", knot = "GEN")
+    am$create("knot", mne = "GEN", desc = "Gender")
+    am$create("attribute", anchor = "AC", mne = "PLV", desc = "ProfessionalLevel", knot = "PLV", hist = TRUE)
+    am$create("knot", mne = "PLV", desc = "ProfessionalLevel")$run()
+    am$load(mapping = list(AC = list("code",
+                                     NAM = c("name", hist = "uni_date"),
+                                     GEN = "gender",
+                                     PLV = c("level", hist = "uni_date"))),
+            data = actor_data,
+            meta = 1L)
+    expect_true(nrow(am$view("AC"))==2L, info = "current view temporal filter, case 1") # current: 2 rows
+    expect_true(nrow(am$view("AC", type = "latest"))==4L, info = "latest view temporal filter, case 1") # 4 rows
+    expect_true(nrow(am$view("AC", type = "timepoint", timepoint = as.Date("2015-07-05")))==1L, info = "timepoint view temporal filter, case 1") # 1 row
+
+    am <- AM$new()
+    am$create("anchor", mne = "AC", desc = "Actor")
+    am$create("attribute", anchor = "AC", mne = "NAM", desc = "Name", hist = TRUE)
+    am$create("attribute", anchor = "AC", mne = "GEN", desc = "Gender", knot = "GEN")
+    am$create("knot", mne = "GEN", desc = "Gender")
+    am$create("attribute", anchor = "AC", mne = "PLV", desc = "ProfessionalLevel", knot = "PLV", hist = TRUE)
+    am$create("knot", mne = "PLV", desc = "ProfessionalLevel")$run()
+    am$load(mapping = list(AC = list("code",
+                                     NAM = c("name", hist = "name_date"),
+                                     GEN = "gender",
+                                     PLV = c("level", hist = "level_date"))),
+            data = actor_data,
+            meta = 1L)
+    expect_true(nrow(am$view("AC"))==3L, info = "current view temporal filter, case 2") # current: 3 rows
+    expect_true(nrow(am$view("AC", type = "latest"))==4L, info = "latest view temporal filter, case 2") # 4 rows
+    expect_true(nrow(am$view("AC", type = "timepoint", timepoint = as.Date("2015-07-05")))==1L, info = "timepoint view temporal filter, case 2") # 1 row
 
 })
