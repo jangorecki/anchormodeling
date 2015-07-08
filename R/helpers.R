@@ -99,6 +99,8 @@ temporal_filter <- function(x, cols){
 
 technical_filter <- function(x){
     coltypes <- attr(x,"coltypes",TRUE)
+    if(is.null(coltypes)) return(x)
+    if(!identical(sort(names(x)),sort(names(coltypes)))) return(x)
     x[, c(names(coltypes)[coltypes %chin% c("data","hist")]), with=FALSE]
 }
 

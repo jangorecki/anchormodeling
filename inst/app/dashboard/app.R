@@ -40,7 +40,7 @@ ui <- dashboardPage(
                                                    Ties = AM()$read(class="tie")[, setNames(code, name)])),
                         checkboxInput("view_data_only", label = "Hide ID and metadata", value = FALSE)
                     ),
-                    fluidRow(DT::dataTableOutput("view_3nf"))
+                    fluidRow(DT::dataTableOutput("view"))
             ),
             tabItem(tabName = "cube",
                     fluidRow(
@@ -49,6 +49,9 @@ ui <- dashboardPage(
                                     choices = list(Anchors = AM()$read(class="anchor")[, setNames(code, name)],
                                                    Ties = AM()$read(class="tie")[, setNames(code, name)]),
                                     multiple = TRUE),
+                        checkboxInput("cube_data_only", label = "Hide ID and metadata", value = TRUE)
+                    ),
+                    fluidRow(
                         DT::dataTableOutput("cube")
                     )),
             tabItem(tabName = "etl",
@@ -73,13 +76,23 @@ server <- function(input, output) {
         validate(need(nrow(AM()$read(input$view)$obj[[1L]]$data) > 0L, message = paste("No data loaded for", input$view)))
         AM()$view(input$view)
     })
-    output$view_3nf <- DT::renderDataTable(DT::datatable({
+    output$view <- DT::renderDataTable(DT::datatable({
         if(input$view_data_only) technical_filter(view()) else view()
     }, rownames=FALSE, options = list(scrollX = TRUE)))
 
-    output$cube <- DT::renderDataTable(DT::datatable(data.table(to_do = "to do"), rownames=FALSE, options = list(scrollX = TRUE)))
+    cube <- reactive({
+        validate(need(is.character(input$cube_tbls), message = "Select tables 3NF tables to join into cube"))
+        validate(need(all(input$cube_tbls %in% AM()$read(class=c("anchor","tie"))$code), message = "Provided cube tables name does not exists in the model"))
+        # TO DO batch join 3NF tables
+        data.table(to_do = "TO DO batch join 3NF tables")
+    })
+    output$cube <- DT::renderDataTable(DT::datatable({
+        if(input$cube_data_only) technical_filter(cube()) else cube()
+    }, rownames=FALSE, options = list(scrollX = TRUE)))
 
-    output$etl <- DT::renderDataTable(DT::datatable(AM()$etl[nchar(src) > 20L, src := paste0(substr(src,1,20),"...")], rownames=FALSE, options = list(scrollX = TRUE)))
+    output$etl <- DT::renderDataTable(DT::datatable({
+        AM()$etl[nchar(src) > 20L, src := paste0(substr(src,1,20),"...")]
+    }, rownames=FALSE, options = list(scrollX = TRUE)))
 
     # download helpers
 
