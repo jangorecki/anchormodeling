@@ -1,3 +1,11 @@
+# anchormodeling 0.4.1
+
+- [ ] difference views
+- [ ] cube - batch join based on model
+- [ ] load/view supports shared knots
+- [ ] load/view supports 2+ role ties
+
+
 # anchormodeling 0.4
 
 - [x] reorganized AM load method
@@ -8,8 +16,7 @@
 - [x] loading ties
 - [x] dynamically shared knots
 - [x] extract AM data to multiple csv
-- [ ] load/view supports shared knots
-- [ ] load/view supports 2+ role ties
+- [x] added new dependency smartinsightsfromdata/rpivotTable
 
 
 # anchormodeling 0.3.8
