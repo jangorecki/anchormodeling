@@ -93,6 +93,10 @@ try_nanotime <- function(){
     if(requireNamespace("microbenchmark", quietly=TRUE)) microbenchmark::get_nanotime() else proc.time()[[3L]]
 }
 
+temporal_filter <- function(x, cols){
+    if(missing(cols) || length(cols)==0) x else x[!(x[, .(`.na` = all(is.na(.SD))), seq_len(nrow(x)), .SDcols = c(cols)]$.na)]
+}
+
 # mapping -----------------------------------------------------------------
 
 a <- function(src, knot, hist){
