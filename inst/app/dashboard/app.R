@@ -49,7 +49,7 @@ ui <- dashboardPage(
                                     label = "Cube views",
                                     choices = list(Anchors = AM()$read(class="anchor")[, setNames(code, name)],
                                                    Ties = AM()$read(class="tie")[, setNames(code, name)]),
-                                    multiple = TRUE),
+                                    multiple = FALSE),
                         checkboxInput("cube_data_only", label = "Hide ID and metadata", value = TRUE)
                     ),
                     fluidRow(
