@@ -28,6 +28,7 @@ Install R packages.
 install.packages(c("R6","devtools","shinydashboard","microbenchmark","DT"), repos="http://cran.stat.ucla.edu")
 # if asked accept installing to personal library
 library(devtools)
+install_github("smartinsightsfromdata/rpivotTable")
 install_github("Rdatatable/data.table")
 install_github("jangorecki/anchormodeling")
 ```

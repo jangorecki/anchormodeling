@@ -1,6 +1,7 @@
 library(shiny)
 library(shinydashboard)
 library(DT)
+library(rpivotTable)
 library(data.table)
 library(anchormodeling)
 
@@ -52,7 +53,7 @@ ui <- dashboardPage(
                         checkboxInput("cube_data_only", label = "Hide ID and metadata", value = TRUE)
                     ),
                     fluidRow(
-                        DT::dataTableOutput("cube")
+                        rpivotTable::rpivotTableOutput("cube")
                     )),
             tabItem(tabName = "etl",
                     fluidRow(
@@ -83,12 +84,13 @@ server <- function(input, output) {
     cube <- reactive({
         validate(need(is.character(input$cube_tbls), message = "Select tables 3NF tables to join into cube"))
         validate(need(all(input$cube_tbls %in% AM()$read(class=c("anchor","tie"))$code), message = "Provided cube tables name does not exists in the model"))
-        # TO DO batch join 3NF tables
-        data.table(to_do = "TO DO batch join 3NF tables")
+        validate(need(requireNamespace("rpivotTable", quietly = TRUE), message = "Install nice pivot js library as rpivotTable package"))
+        # TO DO batch join 3NF tables, currently only first table
+        AM()$view(input$cube_tbls[[1L]])
     })
-    output$cube <- DT::renderDataTable(DT::datatable({
+    output$cube <- rpivotTable::renderRpivotTable(rpivotTable({
         if(input$cube_data_only) technical_filter(cube()) else cube()
-    }, rownames=FALSE, options = list(scrollX = TRUE)))
+    }))
 
     output$etl <- DT::renderDataTable(DT::datatable({
         AM()$etl[nchar(src) > 20L, src := paste0(substr(src,1,20),"...")]

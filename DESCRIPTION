@@ -8,6 +8,6 @@ Maintainer: Jan Gorecki <j.gorecki@wit.edu.pl>
 Description: Anchor Modeling metadata manager. AM in-memory Data Warehouse instances. Identity Management instaces. Automated parallel ETL for AM loading.
 License: GPL-3
 Depends: data.table (>= 1.9.5)
-Imports: R6
+Imports: R6, shiny, shinydashboard, DT, rpivotTable
 Enhances: microbenchmark
-Suggests: testthat, jsonlite, shiny, shinydashboard, DT
+Suggests: testthat, jsonlite

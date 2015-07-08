@@ -8,6 +8,8 @@ r_packages:
  - shinydashboard
  - DT
  - testthat
+ - jsonlite
 
 r_github_packages:
+ - smartinsightsfromdata/rpivotTable
  - Rdatatable/data.table
