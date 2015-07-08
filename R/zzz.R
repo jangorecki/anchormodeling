@@ -8,4 +8,6 @@
 
     options("datatable.auto.index" = FALSE) # prevent unwanted indexes
 
+    options("datatable.alloccol" = 200L)
+
 }
