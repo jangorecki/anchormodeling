@@ -38,8 +38,9 @@ ui <- dashboardPage(
                                     label = "3NF views",
                                     choices = list(Anchors = AM()$read(class="anchor")[, setNames(code, name)],
                                                    Ties = AM()$read(class="tie")[, setNames(code, name)])),
-                        DT::dataTableOutput("data")
-                    )
+                        checkboxInput("view_data_only", label = "Hide ID and metadata", value = FALSE)
+                    ),
+                    fluidRow(DT::dataTableOutput("view_3nf"))
             ),
             tabItem(tabName = "cube",
                     fluidRow(
@@ -72,7 +73,9 @@ server <- function(input, output) {
         validate(need(nrow(AM()$read(input$view)$obj[[1L]]$data) > 0L, message = paste("No data loaded for", input$view)))
         AM()$view(input$view)
     })
-    output$data <- DT::renderDataTable(DT::datatable(view(), rownames=FALSE, options = list(scrollX = TRUE)))
+    output$view_3nf <- DT::renderDataTable(DT::datatable({
+        if(input$view_data_only) technical_filter(view()) else view()
+    }, rownames=FALSE, options = list(scrollX = TRUE)))
 
     output$cube <- DT::renderDataTable(DT::datatable(data.table(to_do = "to do"), rownames=FALSE, options = list(scrollX = TRUE)))
 

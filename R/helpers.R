@@ -97,6 +97,11 @@ temporal_filter <- function(x, cols){
     if(missing(cols) || length(cols)==0) x else x[!(x[, .(`.na` = all(is.na(.SD))), seq_len(nrow(x)), .SDcols = c(cols)]$.na)]
 }
 
+technical_filter <- function(x){
+    coltypes <- attr(x,"coltypes",TRUE)
+    x[, c(names(coltypes)[coltypes %chin% c("data","hist")]), with=FALSE]
+}
+
 # mapping -----------------------------------------------------------------
 
 a <- function(src, knot, hist){
