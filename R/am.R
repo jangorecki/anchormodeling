@@ -339,13 +339,13 @@ AM <- R6Class(
             }
             master
         },
-        view = function(code, type = "current", timepoint = NULL){
+        view = function(code, type = "current", time = NULL, selection = NULL){
             stopifnot(code %chin% self$read(class=c("anchor","tie"))$code, type %chin% c("latest","timepoint","current","difference"))
             if(self$read(code)$class=="tie"){
                 tie_code <- code
                 tie_colorder <- self$OBJ(tie_code)$cols[self$OBJ(tie_code)$colorder]
                 tie_coltypes <- self$OBJ(tie_code)$coltypes[self$OBJ(tie_code)$colorder]
-                tie_data <- quote(self$OBJ(tie_code)$query(type = type, timepoint = timepoint))
+                tie_data <- quote(self$OBJ(tie_code)$query(type = type, time = time))
                 knot_code <- self$read(tie_code)$knot
                 if(is.na(knot_code)){
                     coltypes <- tie_coltypes
@@ -375,7 +375,7 @@ AM <- R6Class(
                 } else {
                     childs.knotted <- self$read(childs_code)[!is.na(knot), setNames(knot, code)]
                     childs.historized <- self$read(childs_code)[!sapply(hist, is.na), code]
-                    attr_data <- quote(self$OBJ(attr_code)$query(type = type, timepoint = timepoint))
+                    attr_data <- quote(self$OBJ(attr_code)$query(type = type, time = time))
                     res_data <- self$joinv(
                         master = eval(anchor_data),
                         join = lapply(childs_code, function(attr_code){

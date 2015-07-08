@@ -280,7 +280,7 @@ am$view("AU", type = "latest")
 ```
 
 ```r
-am$view("AU", type = "timepoint", timepoint = as.POSIXct("2011-01-01 00:00:00", origin="1970-01-01"))
+am$view("AU", type = "timepoint", time = as.POSIXct("2011-01-01 00:00:00", origin="1970-01-01"))
 ```
 
 ```
@@ -303,7 +303,7 @@ am$view("AU", type = "timepoint", timepoint = as.POSIXct("2011-01-01 00:00:00", 
 ```
 
 ```r
-# am$view("AU", type = "difference", timepoint = c(as.POSIXct("2012-01-01 00:00:00", origin="1970-01-01"), as.POSIXct("2012-02-01 00:00:00", origin="1970-01-01")))
+# am$view("AU", type = "difference", time = c(as.POSIXct("2012-01-01 00:00:00", origin="1970-01-01"), as.POSIXct("2012-02-01 00:00:00", origin="1970-01-01")))
 ```
 
 ## Query metadata

@@ -22,7 +22,7 @@ AMobj <- R6Class(
             if(!db) self$data <- setkeyv(rbindlist(list(self$data, data), use.names=TRUE), self$keys) else stop("db backend not ready")
             return(invisible(self))
         },
-        query = function(type, timepoint, db = FALSE){
+        query = function(type, time, db = FALSE){
             if(db){
                 stop("db backend not implemented")
             }
@@ -34,9 +34,9 @@ AMobj <- R6Class(
                 stopifnot(is.character(type))
                 query <- switch(type,
                                 "latest" = quote(self$data[, tail(.SD, 1L), by=c(exclude.last(self$keys))]),
-                                "timepoint" = quote(self$data[eval(as.name(last(self$keys))) <= timepoint, tail(.SD, 1L), by=c(exclude.last(self$keys))]),
+                                "timepoint" = quote(self$data[eval(as.name(last(self$keys))) <= time, tail(.SD, 1L), by=c(exclude.last(self$keys))]),
                                 "current" = quote(self$data[eval(as.name(last(self$keys))) <= now(class1(eval(as.name(last(self$keys))))), tail(.SD, 1L), by=c(exclude.last(self$keys))]),
-                                "difference" = quote(self$data[eval(as.name(last(self$keys))) %between% timepoint])
+                                "difference" = quote(self$data[eval(as.name(last(self$keys))) %between% time])
                 )
             } # hist=TRUE
             eval(query)[]
