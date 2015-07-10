@@ -326,15 +326,26 @@ AM <- R6Class(
             }
             # for difference view exec lookup distinct id-time, union and then use as master and rolling to joins
             if(allow.cartesian){
-                browser()
-                # to do
-                master <- unique(rbindlist(
-                    lapply(join, function(join) if(length(key(join)) == 2L) join[, unique(.SD), .SDcols = c(key(join))])
-                ))
+                nm <- copy(names(master))
+                keys <- lapply(join, key)
+                temporal_tbl <- sapply(keys, length)==2L
+                rbind_keys <- function(join) rbindlist(lapply(join, function(x) x[, unique(.SD), .SDcols = c(key(x))]))
+                temporal_id <- rbind_keys(join[temporal_tbl])
+                temporal_na <- temporal_id[1L,2L,with=FALSE] # get Date/POSIX date time for ID static attributes NAs
+                static_id <- rbind_keys(join[!temporal_tbl])
+                temporal_data <- rbindlist(list(temporal_id, static_id[, c(names(temporal_na)) := temporal_na[[1L]]]))
+                master <- unique(setnames(temporal_data, nm))
+                if(nrow(master)==0L) browser()
                 setkeyv(master, names(master))
                 for(i in 1:length(join)){
-                    # TO DO add roll join as substitute of LATERAL JOIN
-                    master <- join[[i]][master, allow.cartesian = allow.cartesian][, setnames(.SD,names(join[[i]])[1L],names(master)[1L])]
+                    browser()
+                    # check vs db
+                    # determine column names, reorder, rename
+                    master <- join[[i]][master, allow.cartesian = allow.cartesian]
+                    nnm <- names(master)
+                    # AC_ID column missing
+                    # setnames(master, nnm[c(1L,)])
+                    # [, setnames(.SD,names(join[[i]])[1L],names(master)[1L])]
                 }
             }
             master
@@ -369,6 +380,7 @@ AM <- R6Class(
                 anchor_colorder <- self$OBJ(anchor_code)$cols[self$OBJ(anchor_code)$colorder]
                 anchor_coltypes <- self$OBJ(anchor_code)$coltypes[self$OBJ(anchor_code)$colorder]
                 childs_code <- self$read(anchor_code)$childs[[1L]]
+                if(!is.null(selection) && type=="difference") childs_code <- childs_code[childs_code %chin% selection] # selection argument handlling
                 if(length(childs_code)==0L){
                     coltypes <- anchor_coltypes
                     res_data <- eval(anchor_data)
@@ -376,6 +388,7 @@ AM <- R6Class(
                     childs.knotted <- self$read(childs_code)[!is.na(knot), setNames(knot, code)]
                     childs.historized <- self$read(childs_code)[!sapply(hist, is.na), code]
                     attr_data <- quote(self$OBJ(attr_code)$query(type = type, time = time))
+                    if(nrow(eval(anchor_data)) == 0L) browser()
                     res_data <- self$joinv(
                         master = eval(anchor_data),
                         join = lapply(childs_code, function(attr_code){
