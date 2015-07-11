@@ -315,42 +315,32 @@ AM <- R6Class(
             stopifnot(!missing(master), !missing(join), is.data.table(master), !is.data.table(join), is.list(join), haskey(master))
             if(length(join)==0L) return(master)
             stopifnot(all(sapply(join, haskey)))
-            # for non-difference view exec main loop with lookups, also difference views where all anchor attributes are non historized
+            # avoid copy master in the loop by lookup column and add by reference `:=`
             if(!allow.cartesian){
-                master <- copy(master) # avoid copy master in the loop by lookup column and add by reference `:=`
-                for(i in 1:length(join)){
-                    # faster way thanks to: http://stackoverflow.com/questions/30468455/dynamically-build-call-for-lookup-multiple-columns
-                    lkp_cols <- names(join[[i]])
-                    master[join[[i]], c(lkp_cols) := mget(paste0('i.', lkp_cols))]
-                }
+                master <- copy(master)
             }
-            # for difference view exec lookup distinct id-time, union and then use as master and rolling to joins
+            # for non-difference view exec main loop with lookups, also difference views where all anchor attributes are non historized
             if(allow.cartesian){
                 nm <- copy(names(master))
                 keys <- lapply(join, key)
                 temporal_tbl <- sapply(keys, length)==2L
-                rbind_keys <- function(join) rbindlist(lapply(join, function(x) x[, unique(.SD), .SDcols = c(key(x))]))
-                temporal_id <- rbind_keys(join[temporal_tbl])
-                temporal_na <- temporal_id[1L,2L,with=FALSE] # get Date/POSIX date time for ID static attributes NAs
-                static_id <- rbind_keys(join[!temporal_tbl])
-                temporal_data <- rbindlist(list(temporal_id, static_id[, c(names(temporal_na)) := temporal_na[[1L]]]))
-                master <- unique(setnames(temporal_data, nm))
-                if(nrow(master)==0L) browser()
-                setkeyv(master, names(master))
-                for(i in 1:length(join)){
-                    browser()
-                    # check vs db
-                    # determine column names, reorder, rename
-                    master <- join[[i]][master, allow.cartesian = allow.cartesian]
-                    nnm <- names(master)
-                    # AC_ID column missing
-                    # setnames(master, nnm[c(1L,)])
-                    # [, setnames(.SD,names(join[[i]])[1L],names(master)[1L])]
-                }
+                temporal_id <- unique(rbindlist(lapply(join[temporal_tbl], function(x) x[, unique(.SD), .SDcols = c(key(x))]),
+                                                idcol = "mnemonic"))
+                setcolorder(temporal_id, c(3L,1L,2L))
+                setnames(temporal_id, c("inspectedTimepoint","mnemonic",nm[1L]))
+                setkeyv(temporal_id, c(nm[1L],"inspectedTimepoint"))
+                # lookup anchor metadata field
+                temporal_id[master, c(nm[2L]) := get(paste0("i.",nm[2L]))]
+                master <- temporal_id
+            }
+            for(i in 1:length(join)){
+                # faster way thanks to: http://stackoverflow.com/questions/30468455/dynamically-build-call-for-lookup-multiple-columns
+                lkp_cols <- names(join[[i]])
+                master[join[[i]], c(lkp_cols) := mget(paste0('i.', lkp_cols))]
             }
             master
         },
-        view = function(code, type = "current", time = NULL, selection = NULL){
+        view = function(code, type = "current", time = NULL, selection = NULL, na.rm = FALSE){
             stopifnot(code %chin% self$read(class=c("anchor","tie"))$code, type %chin% c("latest","timepoint","current","difference"))
             if(self$read(code)$class=="tie"){
                 tie_code <- code
@@ -391,7 +381,7 @@ AM <- R6Class(
                     if(nrow(eval(anchor_data)) == 0L) browser()
                     res_data <- self$joinv(
                         master = eval(anchor_data),
-                        join = lapply(childs_code, function(attr_code){
+                        join = setNames(lapply(childs_code, function(attr_code){
                             attr_colorder <- self$OBJ(attr_code)$cols[self$OBJ(attr_code)$colorder]
                             # this will automatically lookup knots to attributes which are knotted and prefix with am entity code
                             if(attr_code %chin% names(childs.knotted)){
@@ -407,8 +397,8 @@ AM <- R6Class(
                             } else {
                                 eval(attr_data)[, .SD, .SDcols = c(attr_colorder)]
                             }
-                        }), # auto knot lookup nested here
-                        allow.cartesian = isTRUE(type=="difference") && isTRUE(length(childs.historized) > 1L) # 'difference' views can explode rows on multiple historized attributes
+                        }), sapply(strsplit(childs_code, split = "_", fixed = TRUE),`[`,2L)), # auto knot lookup nested here, name the list with mnemonics
+                        allow.cartesian = isTRUE(type=="difference") # 'difference' views can explode rows on multiple historized attributes
                     )
                     attr_coltypes <- unlist(lapply(childs_code, function(attr_code){
                         attr_colorder <- self$OBJ(attr_code)$cols[self$OBJ(attr_code)$colorder]
@@ -422,11 +412,19 @@ AM <- R6Class(
                             attr_coltypes
                         }
                     }))
+                    if(isTRUE(type=="difference")){
+                        diff_meta <- setNames(c("hist","meta"),c("inspectedTimepoint","mnemonic"))
+                        anchor_coltypes <- c(diff_meta, anchor_coltypes)
+                    }
                     coltypes <- c(anchor_coltypes, attr_coltypes)
                     if(!identical(names(coltypes), names(res_data))) browser() # check why names not identical
                 }
             } # anchor
-            setattr(temporal_filter(res_data, cols = names(coltypes)[coltypes=="hist"]),"coltypes",coltypes)[] # filter only when cols not empty
+            setattr(temporal_filter(
+                res_data,
+                cols = if(na.rm || type == "difference") names(coltypes)[coltypes=="hist"]
+                ), "coltypes", coltypes
+            )[] # filter only when cols not empty
         },
         xml = function(file = format(Sys.time(),"AM_%Y%m%d_%H%M%S.xml")){
             if(!self$validate()) stop("AM definition is invalid, see am$validate body for conditions")

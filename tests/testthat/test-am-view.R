@@ -152,9 +152,12 @@ test_that("AM temporal filter", {
                                      PLV = c("level", hist = "uni_date"))),
             data = actor_data,
             meta = 1L)
-    expect_true(nrow(am$view("AC"))==2L, info = "current view temporal filter, case 1") # current: 2 rows
-    expect_true(nrow(am$view("AC", type = "latest"))==4L, info = "latest view temporal filter, case 1") # 4 rows
-    expect_true(nrow(am$view("AC", type = "timepoint", time = as.Date("2015-07-05")))==1L, info = "timepoint view temporal filter, case 1") # 1 row
+    expect_true(nrow(am$view("AC"))==4L, info = "current view NO temporal filter, case 1") # current: 2 rows
+    expect_true(nrow(am$view("AC", type = "latest"))==4L, info = "latest view NO temporal filter, case 1") # 4 rows
+    expect_true(nrow(am$view("AC", type = "timepoint", time = as.Date("2015-07-05")))==4L, info = "timepoint view NO temporal filter, case 1") # 1 row
+    expect_true(nrow(am$view("AC",na.rm=TRUE))==2L, info = "current view temporal filter, case 1") # current: 2 rows
+    expect_true(nrow(am$view("AC",na.rm=TRUE, type = "latest"))==4L, info = "latest view temporal filter, case 1") # 4 rows
+    expect_true(nrow(am$view("AC",na.rm=TRUE, type = "timepoint", time = as.Date("2015-07-05")))==1L, info = "timepoint view temporal filter, case 1") # 1 row
 
     am <- AM$new()
     am$create("anchor", mne = "AC", desc = "Actor")
@@ -169,9 +172,12 @@ test_that("AM temporal filter", {
                                      PLV = c("level", hist = "level_date"))),
             data = actor_data,
             meta = 1L)
-    expect_true(nrow(am$view("AC"))==3L, info = "current view temporal filter, case 2") # current: 3 rows
-    expect_true(nrow(am$view("AC", type = "latest"))==4L, info = "latest view temporal filter, case 2") # 4 rows
-    expect_true(nrow(am$view("AC", type = "timepoint", time = as.Date("2015-07-05")))==1L, info = "timepoint view temporal filter, case 2") # 1 row
+    expect_true(nrow(am$view("AC"))==4L, info = "current view NO temporal filter, case 2") # current: 3 rows
+    expect_true(nrow(am$view("AC", type = "latest"))==4L, info = "latest view NO temporal filter, case 2") # 4 rows
+    expect_true(nrow(am$view("AC", type = "timepoint", time = as.Date("2015-07-05")))==4L, info = "timepoint view NO temporal filter, case 2") # 1 row
+    expect_true(nrow(am$view("AC",na.rm=TRUE))==3L, info = "current view temporal filter, case 2") # current: 3 rows
+    expect_true(nrow(am$view("AC",na.rm=TRUE, type = "latest"))==4L, info = "latest view temporal filter, case 2") # 4 rows
+    expect_true(nrow(am$view("AC",na.rm=TRUE, type = "timepoint", time = as.Date("2015-07-05")))==1L, info = "timepoint view temporal filter, case 2") # 1 row
 
 })
 
@@ -199,6 +205,9 @@ test_that("AM difference view", {
             meta = 1L)
 
     skip("test in DEV")
+
+    am$view("AC", type = "difference")
+    am$view("AC", type = "difference", time = c(as.Date("2015-07-06"), as.Date("2015-07-08")))
 
     expect_equal(am$view("AC", type = "difference"),
                  data.table(AC_ID = 1:4,
