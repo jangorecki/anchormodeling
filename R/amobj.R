@@ -29,7 +29,7 @@ AMobj <- R6Class(
             if(length(self$data)==0L){ # no data loaded yet
                 query <- quote(setkeyv(setnames(setDT(rep(list(integer()), length(self$cols))), self$cols), self$keys))
             } else if(missing(type) || !isTRUE(self$hist)){
-                query <- quote(self$data)
+                query <- quote(self$data[])
             } else if(isTRUE(self$hist)){
                 stopifnot(is.character(type))
                 query <- switch(type,

@@ -298,7 +298,9 @@ AM <- R6Class(
             # loading ties
             lapply(load_seq["tie", code, nomatch=0L], function(tie_code){
                 if(!all(self$OBJ(tie_code)$anchors %chin% names(mapping))) stop(paste0("Cannot load tie ",tie_code," without loading anchors for it, missing anchor in load: ",paste(self$OBJ(tie_code)$anchors[!self$OBJ(tie_code)$anchors %chin% names(mapping)], collapse=", "),"."), call. = FALSE)
-                src_cols <- paste0(names(mapping)[names(mapping) %chin% self$OBJ(tie_code)$anchors], "_ID")
+                src_cols <- names(mapping)[names(mapping) %chin% self$OBJ(tie_code)$anchors]
+                src_cols <- src_cols[order(match(src_cols, self$OBJ(tie_code)$anchors))]
+                src_cols <- paste0(src_cols, "_ID")
                 src_cols <- c(src_cols, load_seq[code==tie_code, c(if(is.na(knot)) character() else paste_(mapping[[tie_code]][["knot"]], knot,"ID"), if(hist) mapping[[tie_code]][["hist"]] else character())])
                 cols <- self$OBJ(tie_code)$cols
                 cols <- cols[-length(cols)] # exclude metadata col
@@ -398,14 +400,18 @@ AM <- R6Class(
                     knot_colorder <- self$OBJ(knot_code)$cols[self$OBJ(knot_code)$colorder]
                     knot_data <- quote(self$OBJ(knot_code)$query())
                     knot_role <- self$OBJ(tie_code)$roles[length(self$OBJ(tie_code)$roles)]
-                    knot_cols <- paste0(knot_role, "_", self$OBJ(knot_code)$cols)
-                    knot_key <- paste0(knot_role, "_", c(self$OBJ(knot_code)$keys))
-                    colorder <- c(tie_colorder[-length(tie_colorder)], paste0(knot_role, "_", knot_colorder)[-length(knot_colorder)], tie_colorder[length(tie_colorder)])
-                    knot_coltypes <- setNames(self$OBJ(knot_code)$coltypes, paste0(knot_role, "_", knot_colorder))
-                    coltypes <- c(tie_coltypes[-length(tie_coltypes)], knot_coltypes[-length(knot_coltypes)], tie_coltypes[length(tie_coltypes)])
-                    res_data <- setnames(eval(knot_data), knot_cols)[i = eval(tie_data)[,.SD,, keyby = c(knot_key)], nomatch = NA
-                                                                     ][, .SD,, keyby = c(self$OBJ(tie_code)$keys)
-                                                                       ][, .SD, .SDcols = c(colorder)]
+                    non_id_cols <- paste0(knot_role, "_", self$OBJ(knot_code)$cols[-1L])
+                    knot_cols <- c(paste0(self$OBJ(knot_code)$cols[1L], "_", knot_role), non_id_cols)
+                    knot_key <- knot_cols[1L]
+                    colorder <- c(tie_colorder[-length(tie_colorder)], knot_cols[-1L], tie_colorder[length(tie_colorder)])
+                    knot_coltypes <- setNames(self$OBJ(knot_code)$coltypes, knot_cols[c(2L,3L,1L)])
+                    tie_coltype1 <- self$OBJ(tie_code)$coltypes
+                    coltypes <- c(tie_coltype1[-length(tie_coltype1)], knot_coltypes[-length(knot_coltypes)], tie_coltype1[length(tie_coltype1)])
+                    res_data <- setnames(eval(knot_data), knot_cols
+                                         )[i = eval(tie_data)[,.SD,, keyby = c(knot_key)],
+                                           nomatch = NA
+                                           ][, .SD,, keyby = c(self$OBJ(tie_code)$keys)
+                                             ][, .SD, .SDcols = c(colorder)]
                 } # lkp knot
             } else { # anchor
                 anchor_code <- code

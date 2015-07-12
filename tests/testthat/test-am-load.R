@@ -262,7 +262,7 @@ test_that("AM load - ties tests", {
             data = data.table(perf_code = c(1:2,2L), acto_code = c(1L,1:2)),
             meta = 2L)
     expect_equal(am$OBJ("AC_wasCasted_PE_in")$data,
-                 data.table(AC_ID_wasCasted = c(1:2,2L), PE_ID_in = c(1L,1:2), Metadata_AC_wasCasted_PE_in = rep(2L,3),
+                 data.table(AC_ID_wasCasted = c(1L,1:2), PE_ID_in = c(1:2,2L), Metadata_AC_wasCasted_PE_in = rep(2L,3),
                             key = c("AC_ID_wasCasted","PE_ID_in")),
                  info = "static tie evolution as expected")
 
@@ -290,7 +290,7 @@ test_that("AM load - ties tests", {
             data = data.table(prog_code = c(1:2,3L,3L), acto_code = c(1:2,2L,2L), score = c("A","D","E","D"), date = as.Date("2015-07-03")+c(0:1,0:1)),
             meta = 4L)
     expect_equal(am$OBJ("AC_part_PR_in_RAT_got")$data,
-                 data.table(AC_ID_part = c(1L,3:4,4L), PR_ID_in = c(1:2,2L,2L), RAT_ID_got = c(1L,2L,3L,2L), AC_part_PR_in_RAT_got_ChangedAt = as.Date("2015-07-03")+c(0:1,0:1), Metadata_AC_part_PR_in_RAT_got = rep(4L,4),
+                 data.table(AC_ID_part = c(1:2,2L,2L), PR_ID_in = c(1L,3:4,4L), RAT_ID_got = c(1L,2L,3L,2L), AC_part_PR_in_RAT_got_ChangedAt = as.Date("2015-07-03")+c(0:1,0:1), Metadata_AC_part_PR_in_RAT_got = rep(4L,4),
                             key = c("AC_ID_part","PR_ID_in","AC_part_PR_in_RAT_got_ChangedAt")),
                  info = "knotted historized tie evolution as expected")
 
@@ -304,7 +304,7 @@ test_that("AM load - ties tests", {
             data = data.table(stag_code = c(1:2,2:3), acto_code = c(1L,1:2,2L), date = as.Date("2015-07-03")+c(0:1,0:1)),
             meta = 5L)
     expect_equal(am$OBJ("AC_firstPlayed_ST_at_FIP_on")$data,
-                 data.table(AC_ID_firstPlayed = c(1:2,2:3), ST_ID_at = c(1L,1:2,2L), FIP_ID_on = c(1:2,1:2), Metadata_AC_firstPlayed_ST_at_FIP_on = rep(5L,4),
+                 data.table(AC_ID_firstPlayed = c(1L,1:2,2L), ST_ID_at = c(1:2,2:3), FIP_ID_on = c(1:2,1:2), Metadata_AC_firstPlayed_ST_at_FIP_on = rep(5L,4),
                             key = c("AC_ID_firstPlayed","ST_ID_at")),
                  info = "knotted static tie evolution as expected")
 
