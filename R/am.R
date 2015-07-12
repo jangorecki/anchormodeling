@@ -310,7 +310,7 @@ AM <- R6Class(
             invisible(self)
         },
         OBJ = function(code) self$read(code)$obj[[1L]],
-        joinv = function(master, join, allow.cartesian){
+        joinv = function(master, join, allow.cartesian, time = NULL){
             # simplified jangorecki/dwtools::joinbyv
             stopifnot(!missing(master), !missing(join), is.data.table(master), !is.data.table(join), is.list(join), haskey(master))
             if(length(join)==0L) return(master)
@@ -318,25 +318,51 @@ AM <- R6Class(
             # avoid copy master in the loop by lookup column and add by reference `:=`
             if(!allow.cartesian){
                 master <- copy(master)
+                for(i in 1:length(join)){
+                    # faster way thanks to: http://stackoverflow.com/questions/30468455/dynamically-build-call-for-lookup-multiple-columns
+                    lkp_cols <- names(join[[i]])
+                    master[join[[i]], c(lkp_cols) := mget(paste0('i.', lkp_cols)), roll=+Inf]
+                }
             }
             # for non-difference view exec main loop with lookups, also difference views where all anchor attributes are non historized
             if(allow.cartesian){
                 nm <- copy(names(master))
                 keys <- lapply(join, key)
                 temporal_tbl <- sapply(keys, length)==2L
-                temporal_id <- unique(rbindlist(lapply(join[temporal_tbl], function(x) x[, unique(.SD), .SDcols = c(key(x))]),
+                temporal_id <- unique(rbindlist(lapply(join[temporal_tbl], function(x) x[eval(as.name(key(x)[2L])) %between% time, unique(.SD), .SDcols = c(key(x))]),
                                                 idcol = "mnemonic"))
                 setcolorder(temporal_id, c(3L,1L,2L))
                 setnames(temporal_id, c("inspectedTimepoint","mnemonic",nm[1L]))
                 setkeyv(temporal_id, c(nm[1L],"inspectedTimepoint"))
                 # lookup anchor metadata field
-                temporal_id[master, c(nm[2L]) := get(paste0("i.",nm[2L]))]
-                master <- temporal_id
-            }
-            for(i in 1:length(join)){
-                # faster way thanks to: http://stackoverflow.com/questions/30468455/dynamically-build-call-for-lookup-multiple-columns
-                lkp_cols <- names(join[[i]])
-                master[join[[i]], c(lkp_cols) := mget(paste0('i.', lkp_cols))]
+                meta_col <- nm[2L]
+                master <- temporal_id[master, c(meta_col) := get(paste0("i.",meta_col))]
+                id_col <- copy(names(master)[3L])
+                setkeyv(master,c(id_col,"inspectedTimepoint"))
+                for(i in 1:length(join)){
+                    jn.key <- key(join[[i]])
+                    if(!"mnemonic" %chin% names(master)) browser()
+                    if(length(jn.key)==1L){
+                        lkp_cols <- names(join[[i]])
+                        master[join[[i]], c(lkp_cols) := mget(paste0('i.', lkp_cols))]
+                    } else {
+                        master[, c(jn.key[1L]) := get(id_col)][, c(jn.key[2L]) := inspectedTimepoint]
+                        join[[i]][, `_hist_tmp` := get(jn.key[2L])
+                                  ][, `_id_tmp` := get(jn.key[1L])]
+                        setkeyv(master,jn.key)
+                        setkeyv(join[[i]],jn.key)
+                        master <- join[[i]][master, roll=+Inf
+                                            ][, c(jn.key[2L]) := `_hist_tmp`
+                                              ][, `_hist_tmp` := NULL
+                                                ][, jn.key[1L] := `_id_tmp`
+                                                  ][, `_id_tmp` := NULL]
+                        header <- c("inspectedTimepoint","mnemonic",id_col,meta_col)
+                        neworder <- c(header,names(master)[!names(master) %chin% header])
+                        if(length(neworder)!=length(master)) browser()
+                        setcolorder(master, neworder)
+                        setkeyv(master,c(id_col,"inspectedTimepoint"))
+                    } # historized
+                }
             }
             master
         },
@@ -398,7 +424,8 @@ AM <- R6Class(
                                 eval(attr_data)[, .SD, .SDcols = c(attr_colorder)]
                             }
                         }), sapply(strsplit(childs_code, split = "_", fixed = TRUE),`[`,2L)), # auto knot lookup nested here, name the list with mnemonics
-                        allow.cartesian = isTRUE(type=="difference") # 'difference' views can explode rows on multiple historized attributes
+                        allow.cartesian = isTRUE(type=="difference"), # 'difference' views can explode rows on multiple historized attributes
+                        time = time
                     )
                     attr_coltypes <- unlist(lapply(childs_code, function(attr_code){
                         attr_colorder <- self$OBJ(attr_code)$cols[self$OBJ(attr_code)$colorder]
@@ -413,10 +440,14 @@ AM <- R6Class(
                         }
                     }))
                     if(isTRUE(type=="difference")){
-                        diff_meta <- setNames(c("hist","meta"),c("inspectedTimepoint","mnemonic"))
-                        anchor_coltypes <- c(diff_meta, anchor_coltypes)
+                        res_data <- res_data[inspectedTimepoint %between% time]
+                        diffmeta_coltypes <- setNames(c("hist","meta"),c("inspectedTimepoint","mnemonic"))
+                        anchor_coltypes <- c(diffmeta_coltypes, anchor_coltypes)
                     }
                     coltypes <- c(anchor_coltypes, attr_coltypes)
+                    if(isTRUE(type=="difference")){
+                        setcolorder(res_data, names(coltypes))
+                    }
                     if(!identical(names(coltypes), names(res_data))) browser() # check why names not identical
                 }
             } # anchor

@@ -36,7 +36,7 @@ AMobj <- R6Class(
                                 "latest" = quote(self$data[, tail(.SD, 1L), by=c(exclude.last(self$keys))]),
                                 "timepoint" = quote(self$data[eval(as.name(last(self$keys))) <= time, tail(.SD, 1L), by=c(exclude.last(self$keys))]),
                                 "current" = quote(self$data[eval(as.name(last(self$keys))) <= now(class1(eval(as.name(last(self$keys))))), tail(.SD, 1L), by=c(exclude.last(self$keys))]),
-                                "difference" = quote(self$data[eval(as.name(last(self$keys))) %between% time])
+                                "difference" = quote(self$data[])
                 )
             } # hist=TRUE
             eval(query)[]

@@ -107,8 +107,3 @@ checkTbl(amdt = am$view("AC", type="timepoint", time=as.Date('2015-07-08')), pgd
 amdt <- am$view("AC", type="difference", time=as.Date(c('2015-07-09','2015-07-10')))
 pgdt <- getTbl("dAC_actor('2015-07-09','2015-07-10')")
 checkTbl(amdt = amdt, pgdt = pgdt)
-
-am$view("AC", type="difference", time=as.Date(c('2015-07-05','2015-07-18')))
-getTbl("dAC_actor('2015-07-05','2015-07-08')")
-setDT(dbGetQuery(DBIconn, paste0("select * from dbo.dAC_actor('2015-07-05','2015-07-08');")))[]
-
