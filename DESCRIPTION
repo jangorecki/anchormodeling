@@ -5,7 +5,7 @@ Version: 0.4.1
 Date: 2015-07-11
 Author: Jan Gorecki
 Maintainer: Jan Gorecki <j.gorecki@wit.edu.pl>
-Description: Anchor Modeling metadata manager. AM in-memory Data Warehouse instances. Dashboard in shiny. Identity Management instaces.
+Description: Anchor Modeling metadata manager. AM in-memory Data Warehouse instances. Dashboard in shiny. Identity Management instances.
 License: GPL-3
 Depends: data.table (>= 1.9.5)
 Imports: R6, shiny, shinydashboard, DT, rpivotTable
