@@ -28,8 +28,8 @@ Install R packages.
 install.packages(c("R6","devtools","shinydashboard","microbenchmark","DT"), repos="http://cran.stat.ucla.edu")
 # if asked accept installing to personal library
 library(devtools)
-install_github("smartinsightsfromdata/rpivotTable")
 install_github("Rdatatable/data.table")
+install_github("smartinsightsfromdata/rpivotTable")
 install_github("jangorecki/anchormodeling")
 ```
 
@@ -47,4 +47,4 @@ RStudio is undoubtedly best IDE for R.
 
 ## Anchor Modeling in R
 
-There is a [separate document](inst/doc/anchormodeling.md) which will go through the full process of anchor modeling in R.
+There is a [separate document](anchormodeling.md) which will go through the full process of anchor modeling in R.

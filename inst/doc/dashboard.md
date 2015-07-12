@@ -7,8 +7,8 @@
 - [x] 3nf views
   - [x] anchors 3nf, ties as is
   - [x] knot values looked up
-  - [ ] support various types of views
-  - [ ] calendar picker for point-in-time view
+  - [x] support various types of views
+  - [x] calendar picker for point-in-time view and range picker for difference view
 - [x] etl logs section
 - [ ] cube section
   - [ ] batch join 3nf
