@@ -332,8 +332,12 @@ AM <- R6Class(
                 nm <- copy(names(master))
                 keys <- lapply(join, key)
                 temporal_tbl <- sapply(keys, length)==2L
-                temporal_id <- unique(rbindlist(lapply(join[temporal_tbl], function(x) x[eval(as.name(key(x)[2L])) %between% time, unique(.SD), .SDcols = c(key(x))]),
-                                                idcol = "mnemonic"))
+                if(sum(temporal_tbl)==0L){
+                    temporal_id <- data.table(mnemonic = character(), id = integer(), inspectedTimepoint = as.Date("2015-07-12")[-1L])
+                } else {
+                    temporal_id <- unique(rbindlist(lapply(join[temporal_tbl], function(x) x[eval(as.name(key(x)[2L])) %between% time, unique(.SD), .SDcols = c(key(x))]),
+                                                    idcol = "mnemonic"))
+                }
                 setcolorder(temporal_id, c(3L,1L,2L))
                 setnames(temporal_id, c("inspectedTimepoint","mnemonic",nm[1L]))
                 setkeyv(temporal_id, c(nm[1L],"inspectedTimepoint"))
@@ -379,6 +383,7 @@ AM <- R6Class(
             if(!is.null(selection)) stop("selection argument to difference view is not yet ready")
             if(type=="timepoint" & is.null(time)) stop("Timepoint view must have `time` argument provided.")
             if(type=="difference" & is.null(time)) stop("Difference view must have `time` argument provided as length two vector `c(from, to)`.")
+            if(type=="difference" & length(time)!=2L) stop("Difference view must have `time` argument provided as length two vector `c(from, to)`.")
             stopifnot(code %chin% self$read(class=c("anchor","tie"))$code, type %chin% c("latest","timepoint","current","difference"))
             if(self$read(code)$class=="tie"){
                 tie_code <- code
