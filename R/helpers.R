@@ -97,6 +97,8 @@ temporal_filter <- function(x, cols){
     if(missing(cols) || length(cols)==0) x else x[!(x[, .(`.na` = all(is.na(.SD))), seq_len(nrow(x)), .SDcols = c(cols)]$.na)]
 }
 
+#' @title technical filter for ID and meta filtering
+#' @param x data.table, with coltypes attribute
 #' @export
 technical_filter <- function(x){
     coltypes <- attr(x,"coltypes",TRUE)

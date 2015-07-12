@@ -31,7 +31,8 @@ For configuring fresh linux environment see [Setup Guide](inst/doc/setup.md).
 
 ```r
 library(devtools)
-## install manually if you don't have rpivotTable:
+## install if not installed:
+#install_github("Rdatatable/data.table")
 #install_github("smartinsightsfromdata/rpivotTable")
 install_github("jangorecki/anchormodeling")
 ```
