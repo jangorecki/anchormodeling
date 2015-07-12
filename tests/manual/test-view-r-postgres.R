@@ -20,55 +20,36 @@ browseURL(anchor_modeler_url())
 
 # data --------------------------------------------------------------------
 
-actor_data <- data.table(
-    AC_ID = 1:4,
-    Metadata_AC = rep(1L,4),
-    #AC_NAM_AC_ID = 1:4,
-    AC_NAM_Actor_Name = c("Mike", "Bob", "Alice", "Lee"),
-    Metadata_AC_NAM = rep(1L,4),
-    AC_NAM_ChangedAt = c(as.Date("2015-07-05")+c(0:1,3:4)),
-    #AC_GEN_AC_ID = 1:4,
-    Metadata_AC_GEN = rep(1L,4),
-    AC_GEN_GEN_Gender = c("M", "M", "F", "M"),
-    AC_GEN_Metadata_GEN = rep(1L,4),
-    AC_GEN_GEN_ID = c(1L,1L,2L,1L),
-    #AC_PLV_AC_ID = 1:4,
-    Metadata_AC_PLV = rep(1L,4),
-    AC_PLV_ChangedAt = c(as.Date("2015-07-05")+c(1:2,4:5)),
-    AC_PLV_PLV_ProfessionalLevel = c(4L, 1L, 3L, 4L),
-    AC_PLV_Metadata_PLV = rep(1L,4),
-    AC_PLV_PLV_ID = c(1L,2L,3L,1L)
-)
+actor_data <- data.table(code = c("1", "2", "3", "2", "1", "2"),
+                         name = c("Mike", "Bob", "Alice", "Boby", "Mikey","Boby"),
+                         gender = c("M", "M", "F", "M", "M", "M"),
+                         level = c(4L, 1L, 3L, 1L, 5L, 2L),
+                         name_date = c(as.Date("2015-07-05")+c(0:1,3L,3L,2L,3L)),
+                         level_date = c(as.Date("2015-07-05")+c(1:2,4,2L,2L,5L)))
 
 # load postgres -----------------------------------------------------------
 
 # insert knots
-actor_data[,.(GEN_ID=AC_GEN_GEN_ID, GEN_Gender=AC_GEN_GEN_Gender, Metadata_GEN=AC_GEN_Metadata_GEN)
-           ][,unique(.SD)
-             ][,cat(insert.postgres(.SD, "dbo._gen_gender"),sep="\n")]
-actor_data[,.(PLV_ID=AC_PLV_PLV_ID, PLV_ProfessionalLevel=AC_PLV_PLV_ProfessionalLevel, Metadata_PLV=AC_PLV_Metadata_PLV)
-           ][,unique(.SD)
-             ][,cat(insert.postgres(.SD, "dbo._plv_professionallevel"),sep="\n")]
-# insert attributes
-actor_data[,.SD,.SDcols = c("AC_ID", "Metadata_AC",
-                            "AC_NAM_Actor_Name", "Metadata_AC_NAM", "AC_NAM_ChangedAt",
-                            "AC_GEN_GEN_Gender", "Metadata_AC_GEN", "AC_GEN_Metadata_GEN",
-                            "AC_PLV_PLV_ProfessionalLevel", "AC_PLV_Metadata_PLV", "Metadata_AC_PLV", "AC_PLV_ChangedAt")
-           ][, cat(insert.postgres(.SD, "dbo.lAC_Actor"),sep="\n")]
-"
-INSERT INTO dbo.lAC_Actor (AC_ID, Metadata_AC, AC_NAM_Actor_Name, Metadata_AC_NAM, AC_NAM_ChangedAt, AC_GEN_GEN_Gender, Metadata_AC_GEN, AC_GEN_Metadata_GEN, AC_PLV_PLV_ProfessionalLevel, AC_PLV_Metadata_PLV, Metadata_AC_PLV, AC_PLV_ChangedAt) VALUES (1, 1, 'Mike', 1, '2015-07-05'::date, 'M', 1, 1, 4, 1, 1, '2015-07-06'::date);
-INSERT INTO dbo.lAC_Actor (AC_ID, Metadata_AC, AC_NAM_Actor_Name, Metadata_AC_NAM, AC_NAM_ChangedAt, AC_GEN_GEN_Gender, Metadata_AC_GEN, AC_GEN_Metadata_GEN, AC_PLV_PLV_ProfessionalLevel, AC_PLV_Metadata_PLV, Metadata_AC_PLV, AC_PLV_ChangedAt) VALUES (2, 1, 'Bob', 1, '2015-07-06'::date, 'M', 1, 1, 1, 1, 1, '2015-07-07'::date);
-INSERT INTO dbo.lAC_Actor (AC_ID, Metadata_AC, AC_NAM_Actor_Name, Metadata_AC_NAM, AC_NAM_ChangedAt, AC_GEN_GEN_Gender, Metadata_AC_GEN, AC_GEN_Metadata_GEN, AC_PLV_PLV_ProfessionalLevel, AC_PLV_Metadata_PLV, Metadata_AC_PLV, AC_PLV_ChangedAt) VALUES (3, 1, 'Alice', 1, '2015-07-08'::date, 'F', 1, 1, 3, 1, 1, '2015-07-09'::date);
-INSERT INTO dbo.lAC_Actor (AC_ID, Metadata_AC, AC_NAM_Actor_Name, Metadata_AC_NAM, AC_NAM_ChangedAt, AC_GEN_GEN_Gender, Metadata_AC_GEN, AC_GEN_Metadata_GEN, AC_PLV_PLV_ProfessionalLevel, AC_PLV_Metadata_PLV, Metadata_AC_PLV, AC_PLV_ChangedAt) VALUES (4, 1, 'Lee', 1, '2015-07-09'::date, 'M', 1, 1, 4, 1, 1, '2015-07-10'::date);
-"
+actor_data[,.(GEN_ID=seq_along(unique(gender)), GEN_Gender=unique(gender), Metadata_GEN=1L)
+           ][,cat(insert.postgres(.SD, "dbo._gen_gender"),sep="\n")]
+actor_data[,.(PLV_ID=seq_along(unique(level)), PLV_ProfessionalLevel=unique(level), Metadata_PLV=1L)
+           ][,cat(insert.postgres(.SD, "dbo._plv_professionallevel"),sep="\n")]
+# insert anchor and attributes
+actor_data[,.SD
+           ][, AC_ID := .GRP, code
+             ][, .(AC_ID, Metadata_AC = 1L,
+                   AC_NAM_Actor_Name = name, Metadata_AC_NAM = 1L, AC_NAM_ChangedAt = name_date,
+                   AC_GEN_GEN_Gender = gender, Metadata_AC_GEN = 1L, AC_GEN_Metadata_GEN = 1L,
+                   AC_PLV_PLV_ProfessionalLevel = level, AC_PLV_Metadata_PLV = 1L, Metadata_AC_PLV = 1L, AC_PLV_ChangedAt = level_date)
+               ][,cat(insert.postgres(.SD, "dbo.lAC_Actor"),sep="\n")]
 
 # load R ------------------------------------------------------------------
 
-am$load(mapping = list(AC = list("AC_ID2",
-                                 NAM = c("AC_NAM_Actor_Name", hist = "AC_NAM_ChangedAt"),
-                                 GEN = "AC_GEN_GEN_Gender",
-                                 PLV = c("AC_PLV_PLV_ProfessionalLevel", hist = "AC_PLV_ChangedAt"))),
-        data = actor_data[,.(AC_ID2=AC_ID,AC_NAM_Actor_Name,AC_NAM_ChangedAt,AC_GEN_GEN_Gender,AC_PLV_PLV_ProfessionalLevel,AC_PLV_ChangedAt)],
+am$load(mapping = list(AC = list("code",
+                                 NAM = c("name", hist = "name_date"),
+                                 GEN = "gender",
+                                 PLV = c("level", hist = "level_date"))),
+        data = actor_data,
         meta = 1L)
 
 # view --------------------------------------------------------------------
@@ -101,9 +82,16 @@ checkTbl(amdt = am$view("AC", type="latest"), pgdt = getTbl("lAC_actor"))
 checkTbl(amdt = am$view("AC", type="current"), pgdt = getTbl("nAC_actor"))
 # point-in-time view
 checkTbl(amdt = am$view("AC", type="timepoint", time=as.Date('2015-07-08')), pgdt = getTbl("pAC_actor('2015-07-08')"))
-
+checkTbl(amdt = am$view("AC", type="timepoint", time=as.Date('2015-07-03')), pgdt = getTbl("pAC_actor('2015-07-03')"))
+checkTbl(amdt = am$view("AC", type="timepoint", time=as.Date('2015-06-05')), pgdt = getTbl("pAC_actor('2015-06-05')"))
+checkTbl(amdt = am$view("AC", type="timepoint", time=as.Date('2015-12-01')), pgdt = getTbl("pAC_actor('2015-12-01')"))
 # difference view
+checkTbl(amdt = am$view("AC", type="difference", time=as.Date(c('2015-07-09','2015-07-10'))), pgdt = getTbl("dAC_actor('2015-07-09','2015-07-10')"))
+checkTbl(amdt = am$view("AC", type="difference", time=as.Date(c('2015-07-04','2015-07-07'))), pgdt = getTbl("dAC_actor('2015-07-04','2015-07-07')"))
+# checkTbl(amdt = am$view("AC", type="difference", time=as.Date(c('2015-06-05','2015-06-15'))), pgdt = getTbl("dAC_actor('2015-06-05','2015-06-15')")) RPostgreSQL not support 0 rows result here - test checked using psql
+checkTbl(amdt = am$view("AC", type="difference", time=as.Date(c('2015-06-05','2015-07-08'))), pgdt = getTbl("dAC_actor('2015-06-05','2015-07-08')"))
 
-amdt <- am$view("AC", type="difference", time=as.Date(c('2015-07-09','2015-07-10')))
-pgdt <- getTbl("dAC_actor('2015-07-09','2015-07-10')")
-checkTbl(amdt = amdt, pgdt = pgdt)
+# test-am-view - difference views
+checkTbl(amdt = am$view("AC", type = "difference", time = c(as.Date("2015-07-03"), as.Date("2015-07-07"))), pgdt = getTbl("dAC_actor('2015-07-03','2015-07-07')"))
+checkTbl(amdt = am$view("AC", type = "difference", time = c(as.Date("2015-07-06"), as.Date("2015-07-08"))), pgdt = getTbl("dAC_actor('2015-07-06','2015-07-08')"))
+checkTbl(amdt = am$view("AC", type = "difference", time = c(as.Date("2015-07-06"), as.Date("2015-07-10"))), pgdt = getTbl("dAC_actor('2015-07-06','2015-07-10')"))

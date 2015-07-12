@@ -321,7 +321,10 @@ AM <- R6Class(
                 for(i in 1:length(join)){
                     # faster way thanks to: http://stackoverflow.com/questions/30468455/dynamically-build-call-for-lookup-multiple-columns
                     lkp_cols <- names(join[[i]])
-                    master[join[[i]], c(lkp_cols) := mget(paste0('i.', lkp_cols)), roll=+Inf]
+                    master[join[[i]], c(lkp_cols) := mget(paste0('i.', lkp_cols))]
+                    if(!all(lkp_cols %chin% names(master))){
+                        master[, c(lkp_cols) := join[[i]][1L]]
+                    } # fix for data.table#1166
                 }
             }
             # for non-difference view exec main loop with lookups, also difference views where all anchor attributes are non historized
@@ -337,6 +340,7 @@ AM <- R6Class(
                 # lookup anchor metadata field
                 meta_col <- nm[2L]
                 master <- temporal_id[master, c(meta_col) := get(paste0("i.",meta_col))]
+                if(!meta_col %chin% names(master)) master[, c(meta_col) := NA_integer_] # fix for data.table#116
                 id_col <- copy(names(master)[3L])
                 setkeyv(master,c(id_col,"inspectedTimepoint"))
                 for(i in 1:length(join)){
@@ -345,12 +349,16 @@ AM <- R6Class(
                     if(length(jn.key)==1L){
                         lkp_cols <- names(join[[i]])
                         master[join[[i]], c(lkp_cols) := mget(paste0('i.', lkp_cols))]
+                        if(!all(lkp_cols %chin% names(master))){
+                            master[, c(lkp_cols) := join[[i]][1L]]
+                        } # fix for data.table#1166
                     } else {
                         master[, c(jn.key[1L]) := get(id_col)][, c(jn.key[2L]) := inspectedTimepoint]
                         join[[i]][, `_hist_tmp` := get(jn.key[2L])
                                   ][, `_id_tmp` := get(jn.key[1L])]
                         setkeyv(master,jn.key)
                         setkeyv(join[[i]],jn.key)
+                        # cannot lookup by reference on rolling join: data.table#1217
                         master <- join[[i]][master, roll=+Inf
                                             ][, c(jn.key[2L]) := `_hist_tmp`
                                               ][, `_hist_tmp` := NULL
@@ -367,6 +375,10 @@ AM <- R6Class(
             master
         },
         view = function(code, type = "current", time = NULL, selection = NULL, na.rm = FALSE){
+            if(type=="now") type <- "current" else if(type=="diff") type <- "difference"
+            if(!is.null(selection)) stop("selection argument to difference view is not yet ready")
+            if(type=="timepoint" & is.null(time)) stop("Timepoint view must have `time` argument provided.")
+            if(type=="difference" & is.null(time)) stop("Difference view must have `time` argument provided as length two vector `c(from, to)`.")
             stopifnot(code %chin% self$read(class=c("anchor","tie"))$code, type %chin% c("latest","timepoint","current","difference"))
             if(self$read(code)$class=="tie"){
                 tie_code <- code

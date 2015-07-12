@@ -183,12 +183,12 @@ test_that("AM temporal filter", {
 
 test_that("AM difference view", {
 
-    actor_data <- data.table(code = c("1", "2", "3", "4"),
-                             name = c("Mike", "Bob", "Alice", "Lee"),
-                             gender = c("M", "M", "F", "M"),
-                             level = c(4L, 1L, 3L, 4L),
-                             name_date = c(as.Date("2015-07-05")+c(0:1,3:4)),
-                             level_date = c(as.Date("2015-07-05")+c(1:2,4:5)))
+    actor_data <- data.table(code = c("1", "2", "3", "2", "1", "2"),
+                             name = c("Mike", "Bob", "Alice", "Boby", "Mikey","Boby"),
+                             gender = c("M", "M", "F", "M", "M", "M"),
+                             level = c(4L, 1L, 3L, 1L, 5L, 2L),
+                             name_date = c(as.Date("2015-07-05")+c(0:1,3L,3L,2L,3L)),
+                             level_date = c(as.Date("2015-07-05")+c(1:2,4,2L,2L,5L)))
 
     am <- AM$new()
     am$create("anchor", mne = "AC", desc = "Actor")
@@ -204,31 +204,78 @@ test_that("AM difference view", {
             data = actor_data,
             meta = 1L)
 
-    skip("test in DEV")
+    # output of below test validated against postgres db, script in tests/manual/test-view-r-postgres.R
 
-    am$view("AC", type = "difference")
-    am$view("AC", type = "difference", time = c(as.Date("2015-07-06"), as.Date("2015-07-08")))
-
-    expect_equal(am$view("AC", type = "difference"),
-                 data.table(AC_ID = 1:4,
-                            Metadata_AC = 1:4,
-                            AC_GEN_AC_ID = c(NA, 2L, 3L, 4L),
-                            Metadata_AC_GEN = c(NA, 3L, 3L, 4L),
-                            AC_GEN_GEN_Gender = c(NA, "M", "F", "M"),
-                            AC_GEN_Metadata_GEN = c(NA, 3L, 3L, 3L),
-                            AC_GEN_GEN_ID = c(NA, 1L, 2L, 1L),
-                            AC_NAM_AC_ID = 1:4,
-                            Metadata_AC_NAM = c(2L,2L,3L,4L),
-                            AC_NAM_ChangedAt = as.Date("2015-07-05")[rep(1,4)],
-                            AC_NAM_Actor_Name = c("Mike","Bob","Alice","Lee"),
-                            AC_PLV_AC_ID = c(NA, NA, 3L, 4L),
-                            Metadata_AC_PLV = c(NA, NA, 4L, 4L),
-                            AC_PLV_ChangedAt = as.Date("2015-07-05")[c(NA,NA,1L,1L)],
-                            AC_PLV_PLV_ProfessionalLevel = c(NA, NA, 3L, 4L),
-                            AC_PLV_Metadata_PLV = c(NA, NA, 4L, 4L),
-                            AC_PLV_PLV_ID = c(NA, NA, 1L, 2L),
+    expect_equal(am$view("AC", type = "difference", time = c(as.Date("2015-07-03"), as.Date("2015-07-07"))),
+                 data.table(inspectedTimepoint = structure(c(16621, 16622, 16623, 16623, 16622, 16623), class = "Date"),
+                            mnemonic = c("NAM", "PLV", "NAM", "PLV", "NAM", "PLV"),
+                            AC_ID = c(1L, 1L, 1L, 1L, 2L, 2L),
+                            Metadata_AC = c(1L, 1L, 1L, 1L, 1L, 1L),
+                            AC_GEN_AC_ID = c(1L, 1L, 1L, 1L, 2L, 2L),
+                            Metadata_AC_GEN = c(1L, 1L, 1L, 1L, 1L, 1L),
+                            AC_GEN_GEN_Gender = c("M", "M", "M", "M", "M", "M"),
+                            AC_GEN_Metadata_GEN = c(1L, 1L, 1L, 1L, 1L, 1L),
+                            AC_GEN_GEN_ID = c(1L, 1L, 1L, 1L, 1L, 1L),
+                            AC_NAM_AC_ID = c(1L, 1L, 1L, 1L, 2L, 2L),
+                            Metadata_AC_NAM = c(1L, 1L, 1L, 1L, 1L, 1L),
+                            AC_NAM_ChangedAt = structure(c(16621, 16621, 16623, 16623, 16622, 16622), class = "Date"),
+                            AC_NAM_Actor_Name = c("Mike", "Mike", "Mikey", "Mikey", "Bob", "Bob"),
+                            AC_PLV_AC_ID = c(NA, 1L, 1L, 1L, NA, 2L),
+                            Metadata_AC_PLV = c(NA, 1L, 1L, 1L, NA, 1L),
+                            AC_PLV_ChangedAt = structure(c(NA, 16622, 16623, 16623, NA, 16623), class = "Date"),
+                            AC_PLV_PLV_ProfessionalLevel = c(NA, 4L, 5L, 5L, NA, 1L),
+                            AC_PLV_Metadata_PLV = c(NA, 1L, 1L, 1L, NA, 1L),
+                            AC_PLV_PLV_ID = c(NA, 1L, 4L, 4L, NA, 2L),
                             key = "AC_ID"),
                  check.attributes = FALSE,
-                 info = "currenct view AC + NAM + GEN + PLV, step 4")
+                 info = "difference view AC + NAM + GEN + PLV, step 1")
+
+    expect_equal(am$view("AC", type = "difference", time = c(as.Date("2015-07-06"), as.Date("2015-07-08"))),
+                 data.table(inspectedTimepoint = structure(c(16622, 16623, 16623, 16622, 16623, 16624, 16624), class = "Date"),
+                            mnemonic = c("PLV", "NAM", "PLV", "NAM", "PLV", "NAM", "NAM"),
+                            AC_ID = c(1L, 1L, 1L, 2L, 2L, 2L, 3L),
+                            Metadata_AC = c(1L, 1L, 1L, 1L, 1L, 1L, 1L),
+                            AC_GEN_AC_ID = c(1L, 1L, 1L, 2L, 2L, 2L, 3L),
+                            Metadata_AC_GEN = c(1L, 1L, 1L, 1L, 1L, 1L, 1L),
+                            AC_GEN_GEN_Gender = c("M", "M", "M", "M", "M", "M", "F"),
+                            AC_GEN_Metadata_GEN = c(1L, 1L, 1L, 1L, 1L, 1L, 1L),
+                            AC_GEN_GEN_ID = c(1L, 1L, 1L, 1L, 1L, 1L, 2L),
+                            AC_NAM_AC_ID = c(1L, 1L, 1L, 2L, 2L, 2L, 3L),
+                            Metadata_AC_NAM = c(1L, 1L, 1L, 1L, 1L, 1L, 1L),
+                            AC_NAM_ChangedAt = structure(c(16621, 16623, 16623, 16622, 16622, 16624, 16624), class = "Date"),
+                            AC_NAM_Actor_Name = c("Mike", "Mikey", "Mikey", "Bob", "Bob", "Boby", "Alice"),
+                            AC_PLV_AC_ID = c(1L, 1L, 1L, NA, 2L, 2L, NA),
+                            Metadata_AC_PLV = c(1L, 1L, 1L, NA, 1L, 1L, NA),
+                            AC_PLV_ChangedAt = structure(c(16622, 16623, 16623, NA, 16623, 16623, NA), class = "Date"),
+                            AC_PLV_PLV_ProfessionalLevel = c(4L, 5L, 5L, NA, 1L, 1L, NA),
+                            AC_PLV_Metadata_PLV = c(1L, 1L, 1L, NA, 1L, 1L, NA),
+                            AC_PLV_PLV_ID = c(1L, 4L, 4L, NA, 2L, 2L, NA),
+                            key = "AC_ID"),
+                 check.attributes = FALSE,
+                 info = "difference view AC + NAM + GEN + PLV, step 2")
+
+    expect_equal(am$view("AC", type = "difference", time = c(as.Date("2015-07-06"), as.Date("2015-07-10"))),
+                 data.table(inspectedTimepoint = structure(c(16622, 16623, 16623, 16622, 16623, 16624, 16626, 16624, 16625), class = "Date"),
+                            mnemonic = c("PLV", "NAM", "PLV", "NAM", "PLV", "NAM", "PLV", "NAM", "PLV"),
+                            AC_ID = c(1L, 1L, 1L, 2L, 2L, 2L, 2L, 3L, 3L),
+                            Metadata_AC = c(1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L),
+                            AC_GEN_AC_ID = c(1L, 1L, 1L, 2L, 2L, 2L, 2L, 3L, 3L),
+                            Metadata_AC_GEN = c(1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L),
+                            AC_GEN_GEN_Gender = c("M", "M", "M", "M", "M", "M", "M", "F", "F"),
+                            AC_GEN_Metadata_GEN = c(1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L),
+                            AC_GEN_GEN_ID = c(1L, 1L, 1L, 1L, 1L, 1L, 1L, 2L, 2L),
+                            AC_NAM_AC_ID = c(1L, 1L, 1L, 2L, 2L, 2L, 2L, 3L, 3L),
+                            Metadata_AC_NAM = c(1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L),
+                            AC_NAM_ChangedAt = structure(c(16621, 16623, 16623, 16622, 16622, 16624, 16624, 16624, 16624), class = "Date"),
+                            AC_NAM_Actor_Name = c("Mike", "Mikey", "Mikey", "Bob", "Bob", "Boby", "Boby", "Alice", "Alice"),
+                            AC_PLV_AC_ID = c(1L, 1L, 1L, NA, 2L, 2L, 2L, NA, 3L),
+                            Metadata_AC_PLV = c(1L, 1L, 1L, NA, 1L, 1L, 1L, NA, 1L),
+                            AC_PLV_ChangedAt = structure(c(16622, 16623, 16623, NA, 16623, 16623, 16626, NA, 16625), class = "Date"),
+                            AC_PLV_PLV_ProfessionalLevel = c(4L, 5L, 5L, NA, 1L, 1L, 2L, NA, 3L),
+                            AC_PLV_Metadata_PLV = c(1L, 1L, 1L, NA, 1L, 1L, 1L, NA, 1L),
+                            AC_PLV_PLV_ID = c(1L, 4L, 4L, NA, 2L, 2L, 5L, NA, 3L),
+                            key = "AC_ID"),
+                 check.attributes = FALSE,
+                 info = "difference view AC + NAM + GEN + PLV, step 3")
 
 })

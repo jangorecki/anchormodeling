@@ -1,6 +1,6 @@
 # Anchor Modeling [![Build Status](https://travis-ci.org/jangorecki/anchormodeling.svg?branch=master)](https://travis-ci.org/jangorecki/anchormodeling)
 
-**Current version:** [0.4](NEWS.md)  
+**Current version:** [0.4.1](NEWS.md)  
 
 - [x] Anchor Model metadata manager
 - [x] Export model to XML loadable in [Anchor Modeler](https://roenbaeck.github.io/anchor/)
@@ -12,7 +12,7 @@
 Anchor Modeling Data Warehouse instance supported features:  
 
 - [x] unitemporal
-- [!] views: current, last, point-in-time, difference
+- [x] views: current, last, point-in-time, difference
 - [ ] restatement/idempotency
 - [x] dynamically shared knots
 - [ ] 2+ role ties
