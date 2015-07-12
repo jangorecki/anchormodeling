@@ -2,6 +2,7 @@
 
 - [x] difference views
 - [ ] restatement/idempotency unit tests
+- [x] all types of 3NF views in dashboard
 - [ ] cube - batch join based on model
 - [ ] load/view supports shared knots
 - [ ] load/view supports 2+ role ties

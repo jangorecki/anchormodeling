@@ -35,22 +35,36 @@ ui <- dashboardPage(
             ),
             tabItem(tabName = "data",
                     fluidRow(
-                        selectInput("view",
-                                    label = "3NF views",
-                                    choices = list(Anchors = AM()$read(class="anchor")[, setNames(code, name)],
-                                                   Ties = AM()$read(class="tie")[, setNames(code, name)])),
-                        checkboxInput("view_data_only", label = "Hide ID and metadata", value = FALSE)
+                        column(width = 6L,
+                               selectInput("view",
+                                           label = "3NF views",
+                                           choices = list(Anchors = AM()$read(class="anchor")[, setNames(code, name)],
+                                                          Ties = AM()$read(class="tie")[, setNames(code, name)]))),
+                        column(width = 6L,
+                               radioButtons("view_type", "type", choices = c("current","latest","timepoint","difference"), selected = "current", inline=TRUE),
+                               conditionalPanel("input.view_type == 'timepoint'",
+                                                dateInput("view_timepoint", label = "Point in time")),
+                               conditionalPanel("input.view_type == 'difference'",
+                                                dateRangeInput("view_timepoints", label = "Range timepoints")),
+                               checkboxInput("view_data_only", label = "Hide ID and metadata", value = FALSE))
                     ),
                     fluidRow(DT::dataTableOutput("view"))
             ),
             tabItem(tabName = "cube",
                     fluidRow(
-                        selectInput("cube_tbls",
-                                    label = "Cube views",
-                                    choices = list(Anchors = AM()$read(class="anchor")[, setNames(code, name)],
-                                                   Ties = AM()$read(class="tie")[, setNames(code, name)]),
-                                    multiple = FALSE),
-                        checkboxInput("cube_data_only", label = "Hide ID and metadata", value = TRUE)
+                        column(width = 6L,
+                               selectInput("cube_tbls",
+                                           label = "Cube views",
+                                           choices = list(Anchors = AM()$read(class="anchor")[, setNames(code, name)],
+                                                          Ties = AM()$read(class="tie")[, setNames(code, name)]),
+                                           multiple = FALSE)),
+                        column(width = 6L,
+                               radioButtons("cube_type", "type", choices = c("current","latest","timepoint","difference"), selected = "current", inline=TRUE),
+                               conditionalPanel("input.cube_type == 'timepoint'",
+                                                dateInput("cube_timepoint", label = "Point in time")),
+                               conditionalPanel("input.cube_type == 'difference'",
+                                                dateRangeInput("cube_timepoints", label = "Range timepoints")),
+                               checkboxInput("cube_data_only", label = "Hide ID and metadata", value = TRUE))
                     ),
                     fluidRow(
                         rpivotTable::rpivotTableOutput("cube")
@@ -75,7 +89,16 @@ server <- function(input, output) {
         validate(need(is.character(input$view), message = "Invalid view name"))
         validate(need(input$view %in% AM()$read(class=c("anchor","tie"))$code, message = "Provided view name does not exists in the model"))
         validate(need(nrow(AM()$read(input$view)$obj[[1L]]$data) > 0L, message = paste("No data loaded for", input$view)))
-        AM()$view(input$view)
+        validate(need(input$view_type %chin% c("latest","timepoint","current","difference"), message = "Select view type"))
+        time <- NULL
+        if(input$view_type=="timepoint"){
+            validate(need(input$view_timepoint, message = "Timepoint view requires to provide point in time."))
+            time <- input$view_timepoint
+        } else if(input$view_type=="difference"){
+            validate(need(input$view_timepoints, message = "Difference view requires to provide date range."))
+            time <- input$view_timepoints
+        }
+        AM()$view(input$view, type = input$view_type, time = time)
     })
     output$view <- DT::renderDataTable(DT::datatable({
         if(input$view_data_only) technical_filter(view()) else view()
@@ -85,8 +108,17 @@ server <- function(input, output) {
         validate(need(is.character(input$cube_tbls), message = "Select tables 3NF tables to join into cube"))
         validate(need(all(input$cube_tbls %in% AM()$read(class=c("anchor","tie"))$code), message = "Provided cube tables name does not exists in the model"))
         validate(need(requireNamespace("rpivotTable", quietly = TRUE), message = "Install nice pivot js library as rpivotTable package"))
+        validate(need(input$cube_type %chin% c("latest","timepoint","current","difference"), message = "Select cube view type"))
+        time <- NULL
+        if(input$cube_type=="timepoint"){
+            validate(need(input$cube_timepoint, message = "Timepoint view requires to provide point in time."))
+            time <- input$cube_timepoint
+        } else if(input$cube_type=="difference"){
+            validate(need(input$cube_timepoints, message = "Difference view requires to provide date range."))
+            time <- input$cube_timepoints
+        }
+        AM()$view(input$cube_tbls[[1L]], type = input$cube_type, time = time)
         # TO DO batch join 3NF tables, currently only first table
-        AM()$view(input$cube_tbls[[1L]])
     })
     output$cube <- rpivotTable::renderRpivotTable(rpivotTable({
         if(input$cube_data_only) technical_filter(cube()) else cube()
