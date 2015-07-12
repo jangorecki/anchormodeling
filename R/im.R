@@ -65,7 +65,10 @@ IM <- R6Class(
             # check inputs
             stopifnot(is.data.table(data), nrow(data) > 0L, is.character(mne), length(mne) > 0L)
             # check if no mne_ID cols in the data which would be overwritten
-            stopifnot(all(!paste(mne,"ID",sep="_") %chin% names(data)))
+            newcols <- paste(mne,"ID",sep="_")
+            if(any(newcols %chin% names(data))){
+                stop(paste0("Identity Management could not create identity columns because exact columns names already exists. If you are managing identities externally then use `am$load(..., use.im=FALSE)`. Related to: ",paste(newcols[newcols %chin% names(data)], collapse=", ")))
+            }
             # copy on init
             if(!in.place) data <- copy(data)
             # iterate over mne to update IM with new ID

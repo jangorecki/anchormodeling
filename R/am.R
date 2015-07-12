@@ -310,36 +310,75 @@ AM <- R6Class(
             invisible(self)
         },
         OBJ = function(code) self$read(code)$obj[[1L]],
-        joinv = function(master, join, allow.cartesian){
+        joinv = function(master, join, allow.cartesian, time = NULL){
             # simplified jangorecki/dwtools::joinbyv
             stopifnot(!missing(master), !missing(join), is.data.table(master), !is.data.table(join), is.list(join), haskey(master))
             if(length(join)==0L) return(master)
             stopifnot(all(sapply(join, haskey)))
-            # for non-difference view exec main loop with lookups, also difference views where all anchor attributes are non historized
+            # avoid copy master in the loop by lookup column and add by reference `:=`
             if(!allow.cartesian){
-                master <- copy(master) # avoid copy master in the loop by lookup column and add by reference `:=`
+                master <- copy(master)
                 for(i in 1:length(join)){
                     # faster way thanks to: http://stackoverflow.com/questions/30468455/dynamically-build-call-for-lookup-multiple-columns
                     lkp_cols <- names(join[[i]])
                     master[join[[i]], c(lkp_cols) := mget(paste0('i.', lkp_cols))]
+                    if(!all(lkp_cols %chin% names(master))){
+                        master[, c(lkp_cols) := join[[i]][1L]]
+                    } # fix for data.table#1166
                 }
             }
-            # for difference view exec lookup distinct id-time, union and then use as master and rolling to joins
+            # for non-difference view exec main loop with lookups, also difference views where all anchor attributes are non historized
             if(allow.cartesian){
-                browser()
-                # to do
-                master <- unique(rbindlist(
-                    lapply(join, function(join) if(length(key(join)) == 2L) join[, unique(.SD), .SDcols = c(key(join))])
-                ))
-                setkeyv(master, names(master))
+                nm <- copy(names(master))
+                keys <- lapply(join, key)
+                temporal_tbl <- sapply(keys, length)==2L
+                temporal_id <- unique(rbindlist(lapply(join[temporal_tbl], function(x) x[eval(as.name(key(x)[2L])) %between% time, unique(.SD), .SDcols = c(key(x))]),
+                                                idcol = "mnemonic"))
+                setcolorder(temporal_id, c(3L,1L,2L))
+                setnames(temporal_id, c("inspectedTimepoint","mnemonic",nm[1L]))
+                setkeyv(temporal_id, c(nm[1L],"inspectedTimepoint"))
+                # lookup anchor metadata field
+                meta_col <- nm[2L]
+                master <- temporal_id[master, c(meta_col) := get(paste0("i.",meta_col))]
+                if(!meta_col %chin% names(master)) master[, c(meta_col) := NA_integer_] # fix for data.table#116
+                id_col <- copy(names(master)[3L])
+                setkeyv(master,c(id_col,"inspectedTimepoint"))
                 for(i in 1:length(join)){
-                    # TO DO add roll join as substitute of LATERAL JOIN
-                    master <- join[[i]][master, allow.cartesian = allow.cartesian][, setnames(.SD,names(join[[i]])[1L],names(master)[1L])]
+                    jn.key <- key(join[[i]])
+                    if(!"mnemonic" %chin% names(master)) browser()
+                    if(length(jn.key)==1L){
+                        lkp_cols <- names(join[[i]])
+                        master[join[[i]], c(lkp_cols) := mget(paste0('i.', lkp_cols))]
+                        if(!all(lkp_cols %chin% names(master))){
+                            master[, c(lkp_cols) := join[[i]][1L]]
+                        } # fix for data.table#1166
+                    } else {
+                        master[, c(jn.key[1L]) := get(id_col)][, c(jn.key[2L]) := inspectedTimepoint]
+                        join[[i]][, `_hist_tmp` := get(jn.key[2L])
+                                  ][, `_id_tmp` := get(jn.key[1L])]
+                        setkeyv(master,jn.key)
+                        setkeyv(join[[i]],jn.key)
+                        # cannot lookup by reference on rolling join: data.table#1217
+                        master <- join[[i]][master, roll=+Inf
+                                            ][, c(jn.key[2L]) := `_hist_tmp`
+                                              ][, `_hist_tmp` := NULL
+                                                ][, jn.key[1L] := `_id_tmp`
+                                                  ][, `_id_tmp` := NULL]
+                        header <- c("inspectedTimepoint","mnemonic",id_col,meta_col)
+                        neworder <- c(header,names(master)[!names(master) %chin% header])
+                        if(length(neworder)!=length(master)) browser()
+                        setcolorder(master, neworder)
+                        setkeyv(master,c(id_col,"inspectedTimepoint"))
+                    } # historized
                 }
             }
             master
         },
-        view = function(code, type = "current", time = NULL, selection = NULL){
+        view = function(code, type = "current", time = NULL, selection = NULL, na.rm = FALSE){
+            if(type=="now") type <- "current" else if(type=="diff") type <- "difference"
+            if(!is.null(selection)) stop("selection argument to difference view is not yet ready")
+            if(type=="timepoint" & is.null(time)) stop("Timepoint view must have `time` argument provided.")
+            if(type=="difference" & is.null(time)) stop("Difference view must have `time` argument provided as length two vector `c(from, to)`.")
             stopifnot(code %chin% self$read(class=c("anchor","tie"))$code, type %chin% c("latest","timepoint","current","difference"))
             if(self$read(code)$class=="tie"){
                 tie_code <- code
@@ -369,6 +408,7 @@ AM <- R6Class(
                 anchor_colorder <- self$OBJ(anchor_code)$cols[self$OBJ(anchor_code)$colorder]
                 anchor_coltypes <- self$OBJ(anchor_code)$coltypes[self$OBJ(anchor_code)$colorder]
                 childs_code <- self$read(anchor_code)$childs[[1L]]
+                if(!is.null(selection) && type=="difference") childs_code <- childs_code[childs_code %chin% selection] # selection argument handlling
                 if(length(childs_code)==0L){
                     coltypes <- anchor_coltypes
                     res_data <- eval(anchor_data)
@@ -376,9 +416,10 @@ AM <- R6Class(
                     childs.knotted <- self$read(childs_code)[!is.na(knot), setNames(knot, code)]
                     childs.historized <- self$read(childs_code)[!sapply(hist, is.na), code]
                     attr_data <- quote(self$OBJ(attr_code)$query(type = type, time = time))
+                    if(nrow(eval(anchor_data)) == 0L) browser()
                     res_data <- self$joinv(
                         master = eval(anchor_data),
-                        join = lapply(childs_code, function(attr_code){
+                        join = setNames(lapply(childs_code, function(attr_code){
                             attr_colorder <- self$OBJ(attr_code)$cols[self$OBJ(attr_code)$colorder]
                             # this will automatically lookup knots to attributes which are knotted and prefix with am entity code
                             if(attr_code %chin% names(childs.knotted)){
@@ -394,8 +435,9 @@ AM <- R6Class(
                             } else {
                                 eval(attr_data)[, .SD, .SDcols = c(attr_colorder)]
                             }
-                        }), # auto knot lookup nested here
-                        allow.cartesian = isTRUE(type=="difference") && isTRUE(length(childs.historized) > 1L) # 'difference' views can explode rows on multiple historized attributes
+                        }), sapply(strsplit(childs_code, split = "_", fixed = TRUE),`[`,2L)), # auto knot lookup nested here, name the list with mnemonics
+                        allow.cartesian = isTRUE(type=="difference"), # 'difference' views can explode rows on multiple historized attributes
+                        time = time
                     )
                     attr_coltypes <- unlist(lapply(childs_code, function(attr_code){
                         attr_colorder <- self$OBJ(attr_code)$cols[self$OBJ(attr_code)$colorder]
@@ -409,11 +451,23 @@ AM <- R6Class(
                             attr_coltypes
                         }
                     }))
+                    if(isTRUE(type=="difference")){
+                        res_data <- res_data[inspectedTimepoint %between% time]
+                        diffmeta_coltypes <- setNames(c("hist","meta"),c("inspectedTimepoint","mnemonic"))
+                        anchor_coltypes <- c(diffmeta_coltypes, anchor_coltypes)
+                    }
                     coltypes <- c(anchor_coltypes, attr_coltypes)
+                    if(isTRUE(type=="difference")){
+                        setcolorder(res_data, names(coltypes))
+                    }
                     if(!identical(names(coltypes), names(res_data))) browser() # check why names not identical
                 }
             } # anchor
-            setattr(temporal_filter(res_data, cols = names(coltypes)[coltypes=="hist"]),"coltypes",coltypes)[] # filter only when cols not empty
+            setattr(temporal_filter(
+                res_data,
+                cols = if(na.rm || type == "difference") names(coltypes)[coltypes=="hist"]
+                ), "coltypes", coltypes
+            )[] # filter only when cols not empty
         },
         xml = function(file = format(Sys.time(),"AM_%Y%m%d_%H%M%S.xml")){
             if(!self$validate()) stop("AM definition is invalid, see am$validate body for conditions")

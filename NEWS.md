@@ -1,6 +1,6 @@
 # anchormodeling 0.4.1
 
-- [ ] difference views
+- [x] difference views
 - [ ] cube - batch join based on model
 - [ ] load/view supports shared knots
 - [ ] load/view supports 2+ role ties
