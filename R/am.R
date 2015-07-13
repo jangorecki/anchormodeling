@@ -427,7 +427,6 @@ AM <- R6Class(
                     childs.knotted <- self$read(childs_code)[!is.na(knot), setNames(knot, code)]
                     childs.historized <- self$read(childs_code)[!sapply(hist, is.na), code]
                     attr_data <- quote(self$OBJ(attr_code)$query(type = type, time = time))
-                    if(nrow(eval(anchor_data)) == 0L) browser()
                     res_data <- self$joinv(
                         master = eval(anchor_data),
                         join = setNames(lapply(childs_code, function(attr_code){
