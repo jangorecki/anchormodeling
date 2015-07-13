@@ -15,7 +15,7 @@ Anchor Modeling Data Warehouse instance supported features:
 - [x] views: current, last, point-in-time, difference
 - [ ] restatement/idempotency
 - [x] dynamically shared knots
-- [ ] 2+ role ties
+- [ ] 2+ anchor ties
 - [x] high level ui
   - map source columns to AM entities
   - views output mirrors postgres anchor model sql views
