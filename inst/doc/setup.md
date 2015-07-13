@@ -40,7 +40,7 @@ Your R environment is already configured.
 If you are going not only execute scripts but also write them then the IDE is helpful.  
 RStudio is undoubtedly best IDE for R.  
 
-- If you use linux with GUI, like Ubuntu desktop, you can install RStudio Desktop.
+- If you use windows or linux with GUI, like Ubuntu desktop, you can install RStudio Desktop.
 - If you use cli linux without GUI like Ubuntu server then you can install RStudio Server and access IDE remotely from web browser over http.
 
 [RStudio download page](http://www.rstudio.com/products/RStudio/)

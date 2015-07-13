@@ -12,22 +12,22 @@
 Anchor Modeling Data Warehouse instance supported features:  
 
 - [x] unitemporal
-- [x] views: current, last, point-in-time, difference
-- [ ] restatement/idempotency
+- [x] views: *current*, *latest*, *timepoint*, *difference*
+- [ ] restatement / idempotency
 - [x] dynamically shared knots
 - [ ] 2+ anchor ties
 - [x] high level ui
   - map source columns to AM entities
+  - query 3NF views
   - views output mirrors postgres anchor model sql views
   - auto identitiy management for anchors and knots
   - auto loading knots
   - auto metadata stamping
-  - query 3NF views
-  - anchor model and etl overview dashboard in shiny
+  - web overview dashboard: views, cube, pivoting, ETL logs
 
 ## Installation
 
-For configuring fresh linux environment see [Setup Guide](inst/doc/setup.md).
+You need to have [R](http://www.r-project.org/) installed. You need to have R `devtools` package: `install.packages("devtools")`. On windows it requires [Rtools](http://cran.r-project.org/bin/windows/Rtools/).  
 
 ```r
 library(devtools)
@@ -36,6 +36,8 @@ library(devtools)
 #install_github("smartinsightsfromdata/rpivotTable")
 install_github("jangorecki/anchormodeling")
 ```
+
+Deployment script on fresh environment [Setup Guide](inst/doc/setup.md), useful for Cloud or VM.  
 
 ## How to use
 

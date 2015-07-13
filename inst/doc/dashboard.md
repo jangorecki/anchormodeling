@@ -12,4 +12,4 @@
 - [x] etl logs section
 - [ ] cube section
   - [ ] batch join 3nf
-  - [ ] remove surrogate keys and meta
+  - [x] remove surrogate keys and meta
