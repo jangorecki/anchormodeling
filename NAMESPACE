@@ -2,6 +2,7 @@
 
 export(AM)
 export(IM)
+export(SEQ)
 export(actor.am)
 export(actor.data)
 export(run_anchor_modeler)

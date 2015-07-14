@@ -190,6 +190,33 @@ insert.postgres <- function(x, tbl = "schema.table"){
     )
 }
 
+#' @title SQL Sequence class
+#' @description The sequence may be useful when producing unique integers for meta ID on load process
+#' @export
+SEQ <- R6Class(
+    classname = "SEQ",
+    public = list(
+        initialize =  function(){
+            private$value <- 0L
+            invisible(self)
+        },
+        currval = function(){
+            private$value
+        },
+        nextval = function(){
+            private$value <- private$value + 1L
+            private$value
+        },
+        print = function(){
+            cat(" <SEQ> class\n   current value: ",private$value,sep="")
+            invisible(self)
+        }
+    ),
+    private = list(
+        value = 0L
+    )
+)
+
 # shiny -------------------------------------------------------------------
 
 dashboard_dummy_data <- function(){
