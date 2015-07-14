@@ -27,7 +27,7 @@ Anchor Modeling Data Warehouse instance supported features:
 
 ## Installation
 
-You need to have [R](http://www.r-project.org/) installed. You need to have R `devtools` package: `install.packages("devtools")`. On windows it requires [Rtools](http://cran.r-project.org/bin/windows/Rtools/).  
+You need to have [R](http://www.r-project.org/) installed. You need to have R `devtools` package installed: `install.packages("devtools")`. On windows it requires [Rtools](http://cran.r-project.org/bin/windows/Rtools/).  
 
 ```r
 library(devtools)

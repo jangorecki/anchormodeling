@@ -131,7 +131,7 @@ AM <- R6Class(
             } else {
                 self$data[, anchors := list(lapply(code, as.null))]
             }
-            self$data[class=="attribute", parents := lapply(obj, function(obj) c(as.character(obj$knot), as.character(obj$anchor)))]
+            self$data[class=="attribute", parents := lapply(obj, function(obj) list(c(as.character(obj$knot), as.character(obj$anchor))))]
             if(self$data[class=="attribute",.N > 0L]){
                 self$data[self$read(class="attribute")[,.(childs = list(code)),,anchor], childs := list(i.childs), by = .EACHI]
             } else {

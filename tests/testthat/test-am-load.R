@@ -410,6 +410,54 @@ test_that("AM load - ties tests", {
                             key = "UTL_ID"),
                  info = "dynamically shared knot to two hist ties: second load, knot")
 
+    # incremental shared knot between historized tie and static attribute
+    am$create(class = "anchor", mne = "ZZ", desc = "Zzz")
+    am$create(class = "knot", mne = "TYP", desc = "Type")
+    am$create(class = "tie", anchors = c("PE","ZZ"), knot = "TYP", roles = c("was","at","is"), identifier = c(Inf,Inf,1), hist = TRUE)$run()
+    am$load(mapping = list(PE = list("person_code"),
+                           ZZ = list("zzz_code"),
+                           PE_ZZ_TYP = list(hist = "zzz_date", knot = "zzz_type")),
+            data = data.table(person_code = c(1L,1:2,2L),
+                              zzz_code = c(1:2,2L,2L),
+                              zzz_type = c("a","b","c","b"),
+                              zzz_date = as.Date("2015-07-05")+c(0L,0L,0:1)),
+            meta = 3L)
+    expect_equal(am$OBJ("PE_was_ZZ_at_TYP_is")$query(),
+                 data.table(PE_ID_was = c(1L,1:2,2L),
+                            ZZ_ID_at = c(1:2,2L,2L),
+                            TYP_ID_is = c(1:3,2L),
+                            PE_was_ZZ_at_TYP_is_ChangedAt = as.Date("2015-07-05")+c(0L,0L,0:1),
+                            Metadata_PE_was_ZZ_at_TYP_is= rep(3L,4),
+                            key = c("PE_ID_was","ZZ_ID_at","PE_was_ZZ_at_TYP_is_ChangedAt")),
+                 info = "dynamically shared knot to tie and attribute: first load, tie")
+    expect_equal(am$OBJ("TYP")$query(),
+                 data.table(TYP_ID = 1:3,
+                            TYP_Type = c("a","b","c"),
+                            Metadata_TYP = rep(3L,3),
+                            key = "TYP_ID"),
+                 info = "dynamically shared knot to tie and attribute: first load, knot")
+
+    # dynamic add attribute to knot
+    am$create(class = "attribute", anchor = "ZZ", mne = "ABC", desc = "Abc", knot = "TYP")
+    am$run()
+    am$load(mapping = list(ZZ = list("zzz_code",
+                                     ABC = "abc")),
+            data = data.table(zzz_code = c(2L,1L,3L),
+                              abc = c("e","a","d")),
+            meta = 4L)
+    expect_equal(am$OBJ("ZZ_ABC")$query(),
+                 data.table(ZZ_ABC_ZZ_ID = 1:3,
+                            ZZ_ABC_TYP_ID = c(1L, 4L, 5L),
+                            Metadata_ZZ_ABC = c(4L, 4L, 4L),
+                            key = "ZZ_ABC_ZZ_ID"),
+                 info = "dynamically shared knot to tie and attribute: second load, attribute")
+    expect_equal(am$OBJ("TYP")$query(),
+                 data.table(TYP_ID = 1:5,
+                            TYP_Type = c("a", "b", "c", "e", "d"),
+                            Metadata_TYP = c(3L, 3L, 3L, 4L, 4L),
+                            key = "TYP_ID"),
+                 info = "dynamically shared knot to tie and attribute: second load, knot")
+
     # evolve model: new static knotted self tie - as AC_parent_AC_child_PAT_parentalType from example model
     # am$create(class = "tie", anchors = c("AC","AC"), knot = "PAT", roles = c("parent","child","parentalType"), identifier = c(Inf,Inf,Inf))
     # am$run()
