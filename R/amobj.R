@@ -76,13 +76,33 @@ AMobj <- R6Class(
                 data <- data[!self$query()]
                 # restatement check and idempotency
                 if(isTRUE(self$hist) && identical(self$rest,FALSE)){
-                    # TO DO
-                    browser()
-                    # substitute()
-                    # get new vs previous row
-                    new_vs_prev <- quote(self$query()[data, which(!ST_NAM_Stage_Name == i.ST_NAM_Stage_Name | is.na(ST_NAM_Stage_Name)), roll = +Inf])
-                    # get new vs next row
-                    new_vs_next <- quote(self$query()[data, which(!ST_NAM_Stage_Name == i.ST_NAM_Stage_Name | is.na(ST_NAM_Stage_Name)), roll = -Inf])
+                    if(class1(self)=="attribute" | (class1(self)=="tie" & length(self$knot) > 0L)){
+                        if(length(self$knot) > 0L){
+                            value_col <- names(self$coltypes)[self$coltypes=="ID" & !names(self$coltypes) %chin% self$keys]
+                        } else {
+                            value_col <- names(self$coltypes)[self$coltypes=="data"]
+                        }
+                        new_vs_prev <- substitute(
+                            self$query()[data, which(!old_value == new_value | is.na(old_value)), roll = +Inf],
+                            list(old_value = as.name(value_col),
+                                 new_value = as.name(paste0("i.",value_col)))
+                        )
+                        new_vs_next <- substitute(
+                            self$query()[data, which(!old_value == new_value | is.na(old_value)), roll = -Inf],
+                            list(old_value = as.name(value_col),
+                                 new_value = as.name(paste0("i.",value_col)))
+                        )
+                    } else if(class1(self)=="tie" & length(self$knot) == 0L){
+                        value_col <- names(self$coltypes)[self$coltypes=="meta"]
+                        new_vs_prev <- substitute(
+                            self$query()[data, which(is.na(old_value)), roll = +Inf],
+                            list(old_value = as.name(value_col))
+                        )
+                        new_vs_next <- substitute(
+                            self$query()[data, which(is.na(old_value)), roll = -Inf],
+                            list(old_value = as.name(value_col))
+                        )
+                    }
                     # subset
                     data <- data[intersect(eval(new_vs_prev), eval(new_vs_next))]
                 }

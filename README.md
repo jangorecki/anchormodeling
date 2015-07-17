@@ -13,7 +13,7 @@ Anchor Modeling Data Warehouse instance supported features:
 
 - [x] unitemporal
 - [x] views: *current*, *latest*, *timepoint*, *difference*
-- [ ] restatement / idempotency
+- [x] restatement / idempotency
 - [x] dynamically shared knots
 - [ ] 2+ anchor ties
 - [x] high level ui

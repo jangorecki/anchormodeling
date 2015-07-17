@@ -476,25 +476,35 @@ test_that("AM load - ties tests", {
 
 test_that("AM load - restatements", {
 
-    skip("restatements in dev")
-
-    # attribute rest=TRUE
-
     am <- AM$new()
     am$create(class = "anchor", mne = "AC", desc = "Actor")
-    am$create(class = "attribute", anchor = "AC", mne = "NAM", desc = "Name", hist = TRUE, rest = FALSE)
-    am$run()
+    am$create(class = "attribute", anchor = "AC", mne = "NAM", desc = "Name", hist = TRUE, rest = FALSE)$run()
+
+    # attribute
 
     # initial loading hist data
     am$load(mapping = list(AC = list("code", NAM = c("name", hist = "date"))),
             data = data.table(code = 1L, name = "Mike", date = as.Date("2015-01-01")),
             meta = 1L)
-    expect_identical(am$process()$rows, rep(1L,2L), info = "loaded first hist row")
+    expect_identical(am$process()$rows,
+                     rep(1L,2L),
+                     info = "restatement attribute: loaded first hist row")
+
     # incremental loading new hist data
     am$load(mapping = list(AC = list("code", NAM = c("name", hist = "date"))),
             data = data.table(code = 1L, name = "Mikey", date = as.Date("2015-01-05")),
             meta = 2L)
-    expect_equal(am$process()[order(class), .(rows, in_nrow, unq_nrow, load_nrow)], data.table(rows = 1:2, in_nrow = c(1L,1L), unq_nrow = c(1L,1L), load_nrow = c(0L,1L)), info = "loaded second hist row")
+    expect_equal(am$process()[order(class), .(rows, in_nrow, unq_nrow, load_nrow)],
+                 data.table(rows = 1:2, in_nrow = c(1L,1L), unq_nrow = c(1L,1L), load_nrow = c(0L,1L)),
+                 info = "restatement attribute: loaded second hist row")
+    expect_equal(am$OBJ("AC_NAM")$data,
+                 data.table(AC_NAM_AC_ID = c(1L, 1L),
+                            AC_NAM_Actor_Name = c("Mike", "Mikey"),
+                            AC_NAM_ChangedAt = c(as.Date("2015-01-01"),as.Date("2015-01-05")),
+                            Metadata_AC_NAM = 1:2,
+                            key = c("AC_NAM_AC_ID","AC_NAM_ChangedAt")),
+                 info = "restatement attribute: loaded second hist content")
+
     # incremental loading same existing historized data - should not be loaded, but no error
     am$load(mapping = list(AC = list("code", NAM = c("name", hist = "date"))),
             data = data.table(code = 1L, name = "Mikey", date = as.Date("2015-01-05")),
@@ -505,19 +515,151 @@ test_that("AM load - restatements", {
                             AC_NAM_ChangedAt = c(as.Date("2015-01-01"), as.Date("2015-01-05")),
                             Metadata_AC_NAM = 1:2,
                             key = c("AC_NAM_AC_ID","AC_NAM_ChangedAt")),
-                 info = "historized duplicates on PK silently ignored")
+                 info = "restatement attribute: historized duplicates on PK silently ignored - this is not restatement check yet")
 
-    # incremental loading new hist data but with same value as previous/next value - because of restatement = FALSE they should not be loaded
-    # to do
+    # incremental loading restatement historized data - should not be loaded
+    am$load(mapping = list(AC = list("code", NAM = c("name", hist = "date"))),
+            data = data.table(code = 1L, name = "Mikey", date = as.Date("2015-01-07")),
+            meta = 4L)
+    expect_equal(am$OBJ("AC_NAM")$data,
+                 data.table(AC_NAM_AC_ID = rep(1L,2),
+                            AC_NAM_Actor_Name = c("Mike","Mikey"),
+                            AC_NAM_ChangedAt = c(as.Date("2015-01-01"), as.Date("2015-01-05")),
+                            Metadata_AC_NAM = 1:2,
+                            key = c("AC_NAM_AC_ID","AC_NAM_ChangedAt")),
+                 info = "restatement attribute: restatement on future insert")
 
-    # attribute rest=FALSE
-    # to do
+    am$load(mapping = list(AC = list("code", NAM = c("name", hist = "date"))),
+            data = data.table(code = 1L, name = "Mikey", date = as.Date("2015-01-04")),
+            meta = 5L)
+    expect_equal(am$OBJ("AC_NAM")$data,
+                 data.table(AC_NAM_AC_ID = rep(1L,2),
+                            AC_NAM_Actor_Name = c("Mike","Mikey"),
+                            AC_NAM_ChangedAt = c(as.Date("2015-01-01"), as.Date("2015-01-05")),
+                            Metadata_AC_NAM = 1:2,
+                            key = c("AC_NAM_AC_ID","AC_NAM_ChangedAt")),
+                 info = "restatement attribute: restatement on past insert")
 
-    # tie rest=TRUE
-    # to do
+    am$load(mapping = list(AC = list("code", NAM = c("name", hist = "date"))),
+            data = data.table(code = c(1L,1L), name = c("Mike","Mikey"), date = c(as.Date("2015-01-02"), as.Date("2015-01-04"))),
+            meta = 6L)
+    expect_equal(am$OBJ("AC_NAM")$data,
+                 data.table(AC_NAM_AC_ID = rep(1L,2),
+                            AC_NAM_Actor_Name = c("Mike","Mikey"),
+                            AC_NAM_ChangedAt = c(as.Date("2015-01-01"), as.Date("2015-01-05")),
+                            Metadata_AC_NAM = 1:2,
+                            key = c("AC_NAM_AC_ID","AC_NAM_ChangedAt")),
+                 info = "restatement attribute: restatement on past AND future insert")
 
-    # tie rest=FALSE
-    # to do
+    # knotted attribute
+
+    am <- AM$new()
+    am$create(class = "anchor", mne = "AC", desc = "Actor")
+    am$create(class = "knot", mne = "GEN", desc = "Gender")
+    am$create(class = "attribute", anchor = "AC", mne = "GEN", desc = "Gender", knot = "GEN", hist = TRUE, rest = FALSE)$run()
+
+    am$load(mapping = list(AC = list("code", GEN = c("gender", hist = "date"))),
+            data = data.table(code = c(1L,2L),
+                              gender = c("M","F"),
+                              date = as.Date("2015-01-01")+c(0L,4L)),
+            meta = 1L)
+    expect_identical(am$OBJ("AC_GEN")$data,
+                     data.table(AC_GEN_AC_ID = 1:2,
+                                AC_GEN_GEN_ID = 1:2,
+                                AC_GEN_ChangedAt = as.Date("2015-01-01")+c(0L,4L),
+                                Metadata_AC_GEN = c(1L, 1L),
+                                key = c("AC_GEN_AC_ID","AC_GEN_ChangedAt")),
+                     info = "restatement knotted attribute: loaded first hist rows")
+
+    am$load(mapping = list(AC = list("code", GEN = c("gender", hist = "date"))),
+            data = data.table(code = c(1L,2L),
+                              gender = c("M","F"),
+                              date = as.Date("2015-01-01")+c(-2L,6L)),
+            meta = 2L)
+    expect_identical(am$OBJ("AC_GEN")$data,
+                     data.table(AC_GEN_AC_ID = 1:2,
+                                AC_GEN_GEN_ID = 1:2,
+                                AC_GEN_ChangedAt = as.Date("2015-01-01")+c(0L,4L),
+                                Metadata_AC_GEN = c(1L, 1L),
+                                key = c("AC_GEN_AC_ID","AC_GEN_ChangedAt")),
+                     info = "restatement knotted attribute: restatement on past AND future AND insert")
+
+    # tie
+
+    am <- AM$new()
+    am$create(class = "anchor", mne = "AC", desc = "Actor")
+    am$create(class = "anchor", mne = "PR", desc = "Program")
+    am$create(class = "tie", anchors = c("AC","PR"), roles = c("part","in"), identifier = c(Inf,Inf), hist = TRUE, rest = FALSE)$run()
+    am$load(mapping = list(PR = list("prog_code"),
+                           AC = list("acto_code"),
+                           AC_PR = list(hist = "date")),
+            data = data.table(prog_code = c(1:3,1L),
+                              acto_code = c(1:2,2L,2L),
+                              date = as.Date("2015-07-03")+c(0:1,0:1)),
+            meta = 1L)
+    expect_equal(am$OBJ("AC_part_PR_in")$data,
+                 data.table(AC_ID_part = c(1:2,2L,2L),
+                            PR_ID_in = c(1L,1:3),
+                            AC_part_PR_in_ChangedAt = as.Date("2015-07-03")+c(0:1,1:0),
+                            Metadata_AC_part_PR_in = rep(1L,4),
+                            key = c("AC_ID_part","PR_ID_in","AC_part_PR_in_ChangedAt")),
+                 info = "restatement tie: first insert")
+
+    am$load(mapping = list(PR = list("prog_code"),
+                           AC = list("acto_code"),
+                           AC_PR = list(hist = "date")),
+            data = data.table(prog_code = c(1L,1L,4L),
+                              acto_code = c(1L,2L,2L),
+                              date = as.Date("2015-07-03")+c(1L,-1L,2L)),
+            meta = 2L)
+    expect_equal(am$OBJ("AC_part_PR_in")$data,
+                 data.table(AC_ID_part = c(1:2,2L,2L,2L),
+                            PR_ID_in = c(1L,1:4),
+                            AC_part_PR_in_ChangedAt = as.Date("2015-07-03")+c(0:1,1:0,2L),
+                            Metadata_AC_part_PR_in = c(rep(1L,4),2L),
+                            key = c("AC_ID_part","PR_ID_in","AC_part_PR_in_ChangedAt")),
+                 info = "restatement tie: restatement on past AND future AND new insert")
+
+    # knotted tie
+
+    am <- AM$new()
+    am$create(class = "anchor", mne = "AC", desc = "Actor")
+    am$create(class = "anchor", mne = "PR", desc = "Program")
+    am$create(class = "knot", mne = "RAT", desc = "Rating")
+    am$create(class = "tie", anchors = c("AC","PR"), knot = "RAT", roles = c("part","in","got"), identifier = c(Inf,Inf,1), hist = TRUE, rest = FALSE)$run()
+    am$load(mapping = list(PR = list("prog_code"),
+                           AC = list("acto_code"),
+                           AC_PR_RAT = list(hist = "date", knot = "score")),
+            data = data.table(prog_code = c(1:2,3L,3L),
+                              acto_code = c(1:2,2L,2L),
+                              score = c("A","D","E","D"),
+                              date = as.Date("2015-07-03")+c(0:1,0:1)),
+            meta = 1L)
+    expect_equal(am$OBJ("AC_part_PR_in_RAT_got")$data,
+                 data.table(AC_ID_part = c(1:2,2L,2L),
+                            PR_ID_in = c(1:3,3L),
+                            RAT_ID_got = c(1L,2L,3L,2L),
+                            AC_part_PR_in_RAT_got_ChangedAt = as.Date("2015-07-03")+c(0:1,0:1),
+                            Metadata_AC_part_PR_in_RAT_got = rep(1L,4),
+                            key = c("AC_ID_part","PR_ID_in","AC_part_PR_in_RAT_got_ChangedAt")),
+                 info = "restatement knotted tie: first insert")
+
+    am$load(mapping = list(PR = list("prog_code"),
+                           AC = list("acto_code"),
+                           AC_PR_RAT = list(hist = "date", knot = "score")),
+            data = data.table(prog_code = c(3L,1L),
+                              acto_code = c(2L,1L),
+                              score = c("D","A"),
+                              date = c(as.Date("2015-07-06"),as.Date("2015-06-30"))),
+            meta = 2L)
+    expect_equal(am$OBJ("AC_part_PR_in_RAT_got")$data,
+                 data.table(AC_ID_part = c(1:2,2L,2L),
+                            PR_ID_in = c(1:3,3L),
+                            RAT_ID_got = c(1L,2L,3L,2L),
+                            AC_part_PR_in_RAT_got_ChangedAt = as.Date("2015-07-03")+c(0:1,0:1),
+                            Metadata_AC_part_PR_in_RAT_got = rep(1L,4),
+                            key = c("AC_ID_part","PR_ID_in","AC_part_PR_in_RAT_got_ChangedAt")),
+                 info = "restatement knotted tie: restatement on past AND future AND insert")
 
 })
 

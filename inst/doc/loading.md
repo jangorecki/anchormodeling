@@ -62,7 +62,8 @@
     - [x] validate nrow
     - [x] data types validation - except first load
     - [x] PK and new data value violation for static attributes
-    - [ ] restatement + idempotency
+    - [x] restatement + idempotency
+      - [x] note: does not detect restatements within loading batch, only batch vs history
     - [x] append log
   - [x] AMobj$insert
     - [x] rbindlist

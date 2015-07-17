@@ -1,12 +1,14 @@
 # anchormodeling 0.4.1
 
 - [x] difference views
-- [ ] restatement/idempotency unit tests
+- [x] restatement/idempotency unit tests
 - [x] all types of 3NF views in dashboard
 - [x] sequence class to reflects the SQL sequences
 - [ ] cube - batch join based on model
 - [x] load/view supports shared knots
 - [ ] load/view supports 2+ role ties
+- [ ] load/view supports self ties
+- [ ] introduction vignette
 
 
 # anchormodeling 0.4
