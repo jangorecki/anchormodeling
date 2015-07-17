@@ -485,7 +485,7 @@ AM <- R6Class(
             lines <- c(lines, if(nrow(self$read(class="knot")) > 0L) self$read(class="knot")[, sapply(obj, function(obj) obj$xml())])
             matched_attr <- quote(self$read(class="attribute")[sapply(obj, function(obj) obj[["anchor"]])==anchor_code])
             for(anchor_code in self$read(class="anchor")$code){ # for each anchor nest attributes
-                if(nrow(eval(matched_attr)) > 0) lines <- c(lines, self$read(code = anchor_code)[, sapply(obj, function(obj) obj$xml(attributes = eval(matched_attr)))]) # batch lookup to all anchors attributes
+                lines <- c(lines, self$OBJ(anchor_code)$xml(eval(matched_attr)))
             }
             lines <- c(lines, unlist(sapply(self$read(class="tie")$obj, function(obj) obj$xml())))
             lines <- c(lines, "</schema>")

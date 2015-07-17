@@ -135,11 +135,14 @@ anchor <- R6Class(
         },
         xml = function(attributes){
             # anchor node
-            lines <- paste0('<anchor mnemonic="',self$mne,'" descriptor="',self$desc,'" identity="int">')
+            anchor_open <- paste0('<anchor mnemonic="',self$mne,'" descriptor="',self$desc,'" identity="int">')
             # anchor attributes
-            lines <- c(lines, attributes[, sapply(obj, function(obj) obj$xml())])
-            # anchor close node
-            c(lines, "</anchor>")
+            if(nrow(attributes) > 0L){
+                attrs_lines <- attributes[, sapply(obj, function(obj) obj$xml())]
+                c(anchor_open, attrs_lines, "</anchor>")
+            } else {
+                paste0(anchor_open, "</anchor>")
+            }
         }
     )
 )
