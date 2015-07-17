@@ -3,9 +3,7 @@
 \name{SEQ}
 \alias{SEQ}
 \title{SQL Sequence class}
-\format{\preformatted{Class 'R6ClassGenerator' <environment: 0x32551b0> 
- - attr(*, "name")= chr "SEQ_generator"
-}}
+\format{An R6 class object.}
 \usage{
 SEQ
 }

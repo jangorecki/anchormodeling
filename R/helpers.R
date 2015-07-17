@@ -191,6 +191,7 @@ insert.postgres <- function(x, tbl = "schema.table"){
 }
 
 #' @title SQL Sequence class
+#' @format An R6 class object.
 #' @description The sequence may be useful when producing unique integers for meta ID on load process
 #' @export
 SEQ <- R6Class(
