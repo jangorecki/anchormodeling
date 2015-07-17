@@ -5,7 +5,7 @@
 - [x] all types of 3NF views in dashboard
 - [x] sequence class to reflects the SQL sequences
 - [ ] cube - batch join based on model
-- [ ] load/view supports shared knots
+- [x] load/view supports shared knots
 - [ ] load/view supports 2+ role ties
 
 
