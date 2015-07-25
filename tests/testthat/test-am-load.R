@@ -458,20 +458,46 @@ test_that("AM load - ties tests", {
                             key = "TYP_ID"),
                  info = "dynamically shared knot to tie and attribute: second load, knot")
 
-    # evolve model: new static knotted self tie - as AC_parent_AC_child_PAT_parentalType from example model
-    # am$create(class = "tie", anchors = c("AC","AC"), knot = "PAT", roles = c("parent","child","parentalType"), identifier = c(Inf,Inf,Inf))
-    # am$run()
-    # am$load(mapping = list(AC = list("acto_code"),
-    #                        AC_AC = list(knot = "")),
-    #         data = data.table(perf_code = c(1:2,2L), acto_code = c(1L,1:2)),
-    #         meta = 5L)
-    # expect_equal(am$OBJ("AC_parent_AC_child_PAT_parentalType")$data,
-    #              data.table(AC_ID_parent = c(1:2,2L), AC_ID_child = c(1L,1:2), Metadata_AC_parent_AC_child_PAT_parentalType = rep(5L,3),
-    #                         key = c("AC_ID_parent","AC_ID_child")),
-    #              info = "static knotted self tie evolution as expected")
+    # static knotted self tie - as AC_parent_AC_child_PAT_parentalType from example model
+    am <- AM$new()
+    am$create(class = "anchor", mne = "AC", desc = "Actor")
+    am$create(class = "attribute", anchor = "AC", mne = "NAM", desc = "Name")
+    am$create(class = "knot", mne = "PAT", desc = "ParentalType")
+    am$create(class = "tie", anchors = c("AC","AC"), knot = "PAT", roles = c("parent","child","parentalType"), identifier = c(Inf,Inf,Inf))
+    am$run()
+    parents <- data.table(actor_code = c(1L,1L,2L,3L,4L), actor_name = c("Bob B","Bob B","Ana B","Dan V","Jack F"), child_code = c(11L,12L,12L,13L,NA_integer_), child_name = c("Alan B","Kate B","Kate B","Marry V",NA_character_))
 
-    # evolve model: 3 way tie - as PR_content_ST_location_PE_of
+    skip("in dev")
+    # handle self tie anchors the same way as shared knots and idenetity management?
+    # mapping = list(AC = list(c("parent_code","child_code"), ...))
+    # or extend mapping tie element to point to anchor cols, and not take it from mapping
+    # mapping = list(AC_AC = list())
 
+    am$load(mapping = list(AC = list("code",
+                                     NAM = "name")),
+            data = parents[, .(code =  c(actor_code, child_code), name = c(actor_name, child_name))][!is.na(code)],
+            meta = 1L) # load only anchors
+    am$load(mapping = list(AC = list("actor_code"),
+                           AC_parent_AC_child_PAT_parentalType = list(knot = "type")),
+            data = parents[, c(.SD, list(type = "child"))],
+            meta = 1L) # loading only tie
+    #expect_equal(am$OBJ("AC_parent_AC_child_PAT_parentalType")$data,
+    #             data.table(AC_ID_parent = c(1:2,2L), AC_ID_child = c(1L,1:2), Metadata_AC_parent_AC_child_PAT_parentalType = rep(5L,3),
+    #                        key = c("AC_ID_parent","AC_ID_child")),
+    #             info = "static knotted self tie as expected")
+
+    # 3 way tie - as PR_content_ST_location_PE_of
+    am <- AM$new()
+    am$create(class = "anchor", mne = "PR", desc = "Program")
+    am$create(class = "anchor", mne = "ST", desc = "Stage")
+    am$create(class = "anchor", mne = "PE", desc = "Performance")
+    am$create(class = "tie", anchors = c("PR","ST","PE"), roles = c("content","location","of"), identifier = c(1,1,Inf))
+    am$run()
+
+    skip("in dev")
+    # mapping = list(PR_ST_PE = list(c("program","stage","performance"), ...))
+
+    # am$OBJ("PR_content_ST_location_PE_of")$data
 })
 
 test_that("AM load - restatements", {
