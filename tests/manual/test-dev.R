@@ -7,9 +7,48 @@ library(testthat)
 
 load_all()
 
-options("am.restatability"=TRUE)
-am <- actor.am(3)
+# cube dev ----------------------------------------------------------------
+
+am <- AM$new()
+am$create(class = "anchor", mne = "PR", desc = "Program")
+am$create(class = "anchor", mne = "PE", desc = "Performance")
+am$create(class = "tie", anchors = c("PE","PR"), roles = c("at","wasPlayed"), identifier = c(1,Inf))
+am$create(class = "anchor", mne = "AC", desc = "Actor")
+am$create(class = "tie", anchors = c("AC","PE"), roles = c("wasCasted","in"), identifier = c(Inf,Inf))
+am$create(class = "anchor", mne = "ST", desc = "Stage")
+am$create(class = "tie", anchors = c("PR","ST"), roles = c("isPlayed","at"), identifier = c(Inf,Inf), hist = TRUE)
+am$create(class = "knot", mne = "RAT", desc = "Rating")
+am$create(class = "tie", anchors = c("AC","PR"), knot = "RAT", roles = c("part","in","got"), identifier = c(Inf,Inf,1), hist = TRUE)
+am$create(class = "knot", mne = "FIP", desc = "FirstPlay")
+am$create(class = "tie", anchors = c("AC","ST"), knot = "FIP", roles = c("firstPlayed","at","on"), identifier = c(Inf,Inf,1))
 am$run()
+am$load(mapping = list(PE = list("perf_code"),
+                       PR = list("prog_code"),
+                       PE_PR = list()),
+        data = data.table(perf_code = 1L, prog_code = c(1L,50L)),
+        meta = 1L)
+am$load(mapping = list(PE = list("perf_code"),
+                       AC = list("acto_code"),
+                       AC_PE = list()),
+        data = data.table(perf_code = c(1:2,2L), acto_code = c(1L,1:2)),
+        meta = 2L)
+am$load(mapping = list(PR = list("prog_code"),
+                       ST = list("stag_code"),
+                       PR_ST = list(hist = "date")),
+        data = data.table(prog_code = c(1:2,3L,3L), stag_code = c(1:2,2L,2L), date = as.Date("2015-07-03")+c(0:1,0:1)),
+        meta = 3L)
+am$load(mapping = list(PR = list("prog_code"),
+                       AC = list("acto_code"),
+                       AC_PR_RAT = list(hist = "date", knot = "score")),
+        data = data.table(prog_code = c(1:2,3L,3L), acto_code = c(1:2,2L,2L), score = c("A","D","E","D"), date = as.Date("2015-07-03")+c(0:1,0:1)),
+        meta = 4L)
+am$load(mapping = list(ST = list("stag_code"),
+                       AC = list("acto_code"),
+                       AC_ST_FIP = list(knot = "date")),
+        data = data.table(stag_code = c(1:2,2:3), acto_code = c(1L,1:2,2L), date = as.Date("2015-07-03")+c(0:1,0:1)),
+        meta = 5L)
+
+am$cube(c("AC_firstPlayed_ST_at_FIP_on","AC","ST","PR_isPlayed_ST_at","PR"))
 
 # status checks -----------------------------------------------------------
 
@@ -19,7 +58,7 @@ if(FALSE){
     am$dashboard() # shiny app: anchor model + 3nf views
     am$etl # etl logs
     am$IM() # identity management instance details
-    am$read("ST_NAM")$obj[[1L]]$data
+    # am$OBJ("AC_NAM")$data
 }
 
 # dev datasets ------------------------------------------------------------
@@ -80,8 +119,6 @@ loc1;st1;2015-01-01
 loc2;st2;2015-01-01
 loc2;st4;2015-03-01
 loc3;st3;2015-02-01")
-
-# built-in datasets -------------------------------------------------------
 
 # loading stage -----------------------------------------------------------
 

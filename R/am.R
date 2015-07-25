@@ -479,6 +479,32 @@ AM <- R6Class(
                 ), "coltypes", coltypes
             )[] # filter only when cols not empty
         },
+        cube = function(code){
+            codes <- selfNames(codes)
+            refs <- lapply(codes, function(code) self$OBJ(code)$anchors)
+            self$OBJ("PR_isPlayed_ST_at")$coltypes
+            self$OBJ("PR_isPlayed_ST_at")$keys
+            self$OBJ("PR_isPlayed_ST_at")$knot
+            self$OBJ("PR_isPlayed_ST_at")$hist
+            seq_order <- seq_along(codes) # to do
+            codes <- codes[seq_order]
+            for(i in seq_along(codes)){
+                code <- codes[i]
+                if(i==1L){
+                    r <- self$view(code)
+                } else {
+                    # to do join
+                    tryCatch({
+                        on_ <- c()
+                        r <- self$view(code)[r, on = on_]
+                    },
+                    error = function(e){
+                        stop(paste0("All entities in the cube should be linked for anchors and ties. Processed: ",paste(codes[1:i], collapse=", "),". Not able to join to: ",paste(codes[i:length(codes)], collapse=", "),". Failed with error:\n", as.character(e$message)))
+                    })
+                }
+            }
+            r
+        },
         xml = function(file = format(Sys.time(),"AM_%Y%m%d_%H%M%S.xml")){
             if(!self$validate()) stop("AM definition is invalid, see am$validate body for conditions")
             lines <- paste0('<schema format="0.98" date="',format(Sys.Date(),"%Y-%m-%d"),'" time="',format(Sys.time(),"%H:%M:%S"),'">')
